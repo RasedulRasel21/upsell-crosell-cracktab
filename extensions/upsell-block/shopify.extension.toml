@@ -1,0 +1,12 @@
+name = "upsell-block"
+type = "theme_app_extension"
+api_version = "2025-01"
+
+[build]
+command = ""
+watch = [
+  "blocks/*.liquid",
+  "snippets/*.liquid", 
+  "assets/*.css",
+  "assets/*.js"
+]
