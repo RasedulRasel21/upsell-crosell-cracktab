@@ -1,13 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
-// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
-// enough when changing adapters.
-// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
   provider = "sqlite"
   url      = "file:dev.sqlite"
@@ -36,14 +30,14 @@ model UpsellBlock {
   shop            String
   name            String
   placement       String
-  productHandles  String   // Comma-separated product handles
+  productHandles  String
   title           String   @default("Recommended for you")
   showCount       Int      @default(4)
   autoSlide       Boolean  @default(false)
   slideDuration   Int      @default(5)
   active          Boolean  @default(true)
-  // Style settings
-  layout          String   @default("slider")    // "slider" or "stack"
+  layout          String   @default("slider")
+  columns         Int      @default(4)
   backgroundColor String   @default("#ffffff")
   textColor       String   @default("#000000")
   buttonColor     String   @default("#1a73e8")

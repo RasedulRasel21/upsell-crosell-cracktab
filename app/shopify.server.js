@@ -39,27 +39,18 @@ export const BASIC_PLAN = "basic";
 
 // Plan configurations
 export const PLANS = {
-  FREE: {
-    name: "Free",
-    price: 0,
-    upsellLimit: 3,
-    features: [
-      "Up to 3 upsell blocks",
-      "Basic upsell blocks",
-      "Product page placement"
-    ]
-  },
   PRO: {
     name: "Pro",
     price: 15,
-    upsellLimit: null, // unlimited
+    upsellLimit: 1, // One checkout upsell only
     features: [
-      "Unlimited upsell blocks",
-      "All placement options",
-      "Advanced customization",
-      "Checkout page upsells",
+      "One checkout upsell",
+      "Up to 5 products per upsell", 
+      "Automatic checkout integration",
       "Priority support",
-      "Advanced analytics"
-    ]
+      "Free for development stores"
+    ],
+    // Free for dev stores, paid for production stores
+    isFreeForDevelopment: true
   }
 };

@@ -3,7 +3,10 @@ import prisma from "../db.server";
 export async function getUpsellBlocks(shop) {
   try {
     return await prisma.upsellBlock.findMany({
-      where: { shop },
+      where: { 
+        shop,
+        placement: 'checkout' // Only fetch checkout upsells
+      },
       orderBy: { createdAt: 'desc' }
     });
   } catch (error) {
@@ -24,13 +27,19 @@ export async function createUpsellBlock(data) {
   }
 }
 
-export async function getActiveUpsellBlock(shop, placement = "product_page") {
+export async function getActiveUpsellBlock(shop, placement = "checkout") {
   try {
+    // Only allow checkout placement
+    if (placement !== "checkout") {
+      console.log(`Invalid placement requested: ${placement}. Only checkout is supported.`);
+      return null;
+    }
+    
     console.log(`Fetching active upsell blocks for shop: ${shop}, placement: ${placement}`);
     const blocks = await prisma.upsellBlock.findMany({
       where: {
         shop: shop,
-        placement: placement,
+        placement: "checkout", // Force checkout placement
         active: true,
       },
       orderBy: {
@@ -87,6 +96,20 @@ export async function deleteUpsellBlock(id) {
     return result;
   } catch (error) {
     console.error("Database error deleting upsell block:", error);
+    throw error;
+  }
+}
+
+export async function deleteAllUpsellBlocks(shop) {
+  try {
+    console.log("Deleting all upsell blocks for shop:", shop);
+    const result = await prisma.upsellBlock.deleteMany({
+      where: { shop }
+    });
+    console.log("Successfully deleted all upsell blocks for shop:", shop, "Count:", result.count);
+    return result;
+  } catch (error) {
+    console.error("Database error deleting all upsell blocks for shop:", shop, error);
     throw error;
   }
 }

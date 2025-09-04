@@ -105,6 +105,18 @@ export const loader = async ({ request }) => {
         if (editingUpsell && editingUpsell.shop !== session.shop) {
           editingUpsell = null; // Security: Only allow editing own upsells
         }
+        // Only allow editing checkout upsells
+        if (editingUpsell && editingUpsell.placement !== 'checkout') {
+          editingUpsell = null;
+        }
+      } else if (upsellBlocks.length > 0) {
+        // If not editing but upsells exist, redirect to edit the existing one
+        throw new Response("", {
+          status: 302,
+          headers: {
+            Location: `/app/upsell?edit=${upsellBlocks[0].id}`,
+          },
+        });
       }
       
       console.log("Processed products count:", products.length);
@@ -185,22 +197,23 @@ export const action = async ({ request }) => {
       
       const upsellData = {
         shop: session.shop,
-        name: formData.get("name"),
-        placement: formData.get("placement"),
+        name: `Checkout Upsell - ${new Date().toLocaleDateString()}`,
+        placement: "checkout",
         productHandles: productHandles.join(','),
         title: displaySettings.sliderTitle || "Recommended for you",
-        showCount: displaySettings.showProducts || 4,
-        autoSlide: displaySettings.enableAutoSlide || false,
+        showCount: selectedProducts.length,
+        autoSlide: false,
         slideDuration: 5,
-        // Style settings
-        layout: styleSettings.layout || "slider",
-        backgroundColor: styleSettings.backgroundColor || "#ffffff",
-        textColor: styleSettings.textColor || "#000000",
-        buttonColor: styleSettings.buttonColor || "#1a73e8",
-        buttonText: styleSettings.buttonText || "Add",
-        borderRadius: styleSettings.borderRadius || 8,
-        padding: styleSettings.padding || 16,
-        centerPadding: styleSettings.centerPadding !== undefined ? styleSettings.centerPadding : true,
+        // Style settings - default values for checkout
+        layout: "stack",
+        columns: 1,
+        backgroundColor: "#ffffff",
+        textColor: "#000000",
+        buttonColor: "#1a73e8",
+        buttonText: "Add to cart",
+        borderRadius: 8,
+        padding: 16,
+        centerPadding: true,
       };
 
       // Save to database
@@ -256,45 +269,14 @@ export default function Upsell() {
 
   // State management
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [upsellName, setUpsellName] = useState("");
-  const [placement, setPlacement] = useState("product_page");
-  const [showProducts, setShowProducts] = useState(4);
   const [sliderTitle, setSliderTitle] = useState("Recommended for you");
-  const [enableAutoSlide, setEnableAutoSlide] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Style settings
-  const [layout, setLayout] = useState("slider");
-  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
-  const [textColor, setTextColor] = useState("#000000");
-  const [buttonColor, setButtonColor] = useState("#1a73e8");
-  const [buttonText, setButtonText] = useState("Add");
-  const [borderRadius, setBorderRadius] = useState(8);
-  const [padding, setPadding] = useState(16);
-  const [centerPadding, setCenterPadding] = useState(true);
-  
-  // Save bar state
-  const [hasChanges, setHasChanges] = useState(false);
-  const [initialFormState, setInitialFormState] = useState({});
+  const [hasCreatedUpsell, setHasCreatedUpsell] = useState(false);
 
   // Populate form if editing
   useEffect(() => {
     if (editingUpsell) {
-      setUpsellName(editingUpsell.name || "");
-      setPlacement(editingUpsell.placement || "product_page");
-      setShowProducts(editingUpsell.showCount || 4);
       setSliderTitle(editingUpsell.title || "Recommended for you");
-      setEnableAutoSlide(editingUpsell.autoSlide || false);
-      
-      // Style settings
-      setLayout(editingUpsell.layout || "slider");
-      setBackgroundColor(editingUpsell.backgroundColor || "#ffffff");
-      setTextColor(editingUpsell.textColor || "#000000");
-      setButtonColor(editingUpsell.buttonColor || "#1a73e8");
-      setButtonText(editingUpsell.buttonText || "Add");
-      setBorderRadius(editingUpsell.borderRadius || 8);
-      setPadding(editingUpsell.padding || 16);
-      setCenterPadding(editingUpsell.centerPadding !== undefined ? editingUpsell.centerPadding : true);
       
       // Convert product handles to product IDs for selection
       let productIds = [];
@@ -310,78 +292,39 @@ export default function Upsell() {
         
         setSelectedProducts(productIds);
       }
-      
-      // Set initial state for change tracking
-      const initialState = {
-        upsellName: editingUpsell.name || "",
-        placement: editingUpsell.placement || "product_page",
-        showProducts: editingUpsell.showCount || 4,
-        sliderTitle: editingUpsell.title || "Recommended for you",
-        enableAutoSlide: editingUpsell.autoSlide || false,
-        layout: editingUpsell.layout || "slider",
-        backgroundColor: editingUpsell.backgroundColor || "#ffffff",
-        textColor: editingUpsell.textColor || "#000000",
-        buttonColor: editingUpsell.buttonColor || "#1a73e8",
-        buttonText: editingUpsell.buttonText || "Add",
-        borderRadius: editingUpsell.borderRadius || 8,
-        padding: editingUpsell.padding || 16,
-        centerPadding: editingUpsell.centerPadding !== undefined ? editingUpsell.centerPadding : true,
-        selectedProducts: productIds
-      };
-      setInitialFormState(initialState);
-      setHasChanges(false);
     }
   }, [editingUpsell, products]);
 
-  // Track changes
+  // Limit products to 5 for checkout
   useEffect(() => {
-    if (Object.keys(initialFormState).length === 0) return;
-    
-    const currentState = {
-      upsellName,
-      placement,
-      showProducts,
-      sliderTitle,
-      enableAutoSlide,
-      layout,
-      backgroundColor,
-      textColor,
-      buttonColor,
-      buttonText,
-      borderRadius,
-      padding,
-      centerPadding,
-      selectedProducts
-    };
-    
-    const hasFormChanges = Object.keys(currentState).some(key => {
-      if (Array.isArray(currentState[key]) && Array.isArray(initialFormState[key])) {
-        return JSON.stringify(currentState[key]) !== JSON.stringify(initialFormState[key]);
-      }
-      return currentState[key] !== initialFormState[key];
-    });
-    
-    setHasChanges(hasFormChanges);
-  }, [upsellName, placement, showProducts, sliderTitle, enableAutoSlide, layout, backgroundColor, textColor, buttonColor, buttonText, borderRadius, padding, centerPadding, selectedProducts, initialFormState]);
+    if (selectedProducts.length > 5) {
+      setSelectedProducts(prev => prev.slice(0, 5));
+    }
+  }, [selectedProducts]);
+  
+  // Handle successful creation
+  useEffect(() => {
+    if (fetcher.data?.success && !editingUpsell) {
+      setHasCreatedUpsell(true);
+    }
+  }, [fetcher.data?.success, editingUpsell]);
 
-  // Placement options - checkout temporarily free for testing
-  const placementOptions = [
-    { label: "Product Page - Main Section", value: "product_page" },
-    { label: "Product Page - Below Description", value: "product_description" },
-    { label: "Cart Drawer", value: "cart_drawer" },
-    { label: "Cart Page", value: "cart_page" },
-    { 
-      label: "Checkout Page", 
-      value: "checkout"
-    },
-  ];
 
   const handleProductSelection = useCallback((productId) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
+    setSelectedProducts(prev => {
+      const isCurrentlySelected = prev.includes(productId);
+      
+      if (isCurrentlySelected) {
+        // Remove product
+        return prev.filter(id => id !== productId);
+      } else {
+        // Add product (with limit check for checkout - max 5)
+        if (prev.length >= 5) {
+          return prev; // Don't add if already at limit
+        }
+        return [...prev, productId];
+      }
+    });
   }, []);
 
   // Filter products based on search
@@ -391,34 +334,15 @@ export default function Upsell() {
   );
 
   const handleCreateUpsell = () => {
-    if (!upsellName.trim() || selectedProducts.length === 0) {
+    if (selectedProducts.length === 0) {
       return;
     }
 
-    // Check if checkout placement is selected without Pro plan (temporarily disabled for testing)
-    // if (placement === "checkout" && !hasActiveSubscription) {
-    //   return;
-    // }
-
     const formData = new FormData();
     formData.append("actionType", editingUpsell ? "update_upsell" : "create_upsell");
-    formData.append("name", upsellName);
-    formData.append("placement", placement);
     formData.append("selectedProducts", JSON.stringify(selectedProducts));
     formData.append("displaySettings", JSON.stringify({
-      showProducts,
       sliderTitle,
-      enableAutoSlide,
-    }));
-    formData.append("styleSettings", JSON.stringify({
-      layout,
-      backgroundColor,
-      textColor,
-      buttonColor,
-      buttonText,
-      borderRadius,
-      padding,
-      centerPadding,
     }));
     
     if (editingUpsell) {
@@ -430,49 +354,13 @@ export default function Upsell() {
 
   const isLoading = fetcher.state === "submitting";
 
-  const handleDiscard = () => {
-    if (editingUpsell) {
-      // Reset to initial values
-      setUpsellName(initialFormState.upsellName || "");
-      setPlacement(initialFormState.placement || "product_page");
-      setShowProducts(initialFormState.showProducts || 4);
-      setSliderTitle(initialFormState.sliderTitle || "Recommended for you");
-      setEnableAutoSlide(initialFormState.enableAutoSlide || false);
-      setLayout(initialFormState.layout || "slider");
-      setBackgroundColor(initialFormState.backgroundColor || "#ffffff");
-      setTextColor(initialFormState.textColor || "#000000");
-      setButtonColor(initialFormState.buttonColor || "#1a73e8");
-      setButtonText(initialFormState.buttonText || "Add");
-      setBorderRadius(initialFormState.borderRadius || 8);
-      setPadding(initialFormState.padding || 16);
-      setCenterPadding(initialFormState.centerPadding !== undefined ? initialFormState.centerPadding : true);
-      setSelectedProducts(initialFormState.selectedProducts || []);
-    } else {
-      // Reset to defaults for new form
-      setUpsellName("");
-      setPlacement("product_page");
-      setShowProducts(4);
-      setSliderTitle("Recommended for you");
-      setEnableAutoSlide(false);
-      setLayout("slider");
-      setBackgroundColor("#ffffff");
-      setTextColor("#000000");
-      setButtonColor("#1a73e8");
-      setButtonText("Add");
-      setBorderRadius(8);
-      setPadding(16);
-      setCenterPadding(true);
-      setSelectedProducts([]);
-    }
-    setHasChanges(false);
-  };
 
   // Live Preview Component
   const LivePreview = () => {
     const selectedProductsData = selectedProducts
       .map(productId => products.find(p => p.id === productId))
       .filter(Boolean)
-      .slice(0, showProducts);
+;
 
     if (selectedProductsData.length === 0) {
       return (
@@ -489,125 +377,67 @@ export default function Upsell() {
     return (
       <Card>
         <Box 
-          padding={`${Math.max(padding / 4, 4)}`}
+          padding="400"
           style={{
-            backgroundColor: backgroundColor,
-            color: textColor,
-            borderRadius: `${borderRadius}px`,
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            borderRadius: "8px",
             border: '1px solid #e1e1e1'
           }}
         >
           <BlockStack gap="300">
-            <Text variant="headingMd" style={{ color: textColor }}>
+            <Text variant="headingMd" style={{ color: "#000000" }}>
               {sliderTitle}
             </Text>
-            <Text variant="bodySm" style={{ color: textColor, opacity: 0.7 }}>
-              Customers who bought these items also purchased:
+            <Text variant="bodySm" style={{ color: "#000000", opacity: 0.7 }}>
+              Products will appear during checkout:
             </Text>
             
-            {layout === 'slider' ? (
-              <InlineStack gap="200" wrap={false}>
-                {selectedProductsData.map((product, index) => (
-                  <div key={product.id} style={{ 
-                    minWidth: '150px',
-                    backgroundColor: backgroundColor,
-                    border: '1px solid #e1e1e1',
-                    borderRadius: `${borderRadius}px`,
-                    padding: centerPadding ? '12px' : '8px'
-                  }}>
-                    <BlockStack gap="100">
-                      <div style={{
-                        width: '100%',
-                        height: '80px',
-                        backgroundColor: '#f0f0f0',
-                        borderRadius: `${Math.max(borderRadius - 2, 0)}px`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        color: '#666'
-                      }}>
-                        IMG
-                      </div>
-                      <Text variant="bodyMd" style={{ color: textColor }}>
+            <BlockStack gap="200">
+              {selectedProductsData.map((product, index) => (
+                <div key={product.id} style={{ 
+                  backgroundColor: "#ffffff",
+                  border: '1px solid #e1e1e1',
+                  borderRadius: "8px",
+                  padding: '12px'
+                }}>
+                  <InlineStack gap="200" blockAlignment="center">
+                    <div style={{
+                      width: '60px',
+                      height: '60px',
+                      backgroundColor: '#f0f0f0',
+                      borderRadius: "6px",
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '10px',
+                      color: '#666'
+                    }}>
+                      IMG
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <Text variant="bodyMd" style={{ color: "#000000" }}>
                         Product {index + 1}
                       </Text>
-                      <Text variant="bodyMd" style={{ color: textColor }}>
+                      <Text variant="bodyMd" style={{ color: "#000000" }}>
                         $10.00
                       </Text>
-                      <button style={{
-                        backgroundColor: buttonColor,
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: `${borderRadius}px`,
-                        padding: centerPadding ? '8px 16px' : '6px 12px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}>
-                        {buttonText}
-                      </button>
-                    </BlockStack>
-                  </div>
-                ))}
-                {selectedProductsData.length > 2 && (
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    padding: '0 8px',
-                    color: textColor,
-                    fontSize: '12px'
-                  }}>
-                    +{selectedProductsData.length - 2} more
-                  </div>
-                )}
-              </InlineStack>
-            ) : (
-              <BlockStack gap="200">
-                {selectedProductsData.map((product, index) => (
-                  <div key={product.id} style={{ 
-                    backgroundColor: backgroundColor,
-                    border: '1px solid #e1e1e1',
-                    borderRadius: `${borderRadius}px`,
-                    padding: centerPadding ? '12px' : '8px'
-                  }}>
-                    <InlineStack gap="200" blockAlignment="center">
-                      <div style={{
-                        width: '60px',
-                        height: '60px',
-                        backgroundColor: '#f0f0f0',
-                        borderRadius: `${Math.max(borderRadius - 2, 0)}px`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '10px',
-                        color: '#666'
-                      }}>
-                        IMG
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <Text variant="bodyMd" style={{ color: textColor }}>
-                          Product {index + 1}
-                        </Text>
-                        <Text variant="bodyMd" style={{ color: textColor }}>
-                          $10.00
-                        </Text>
-                      </div>
-                      <button style={{
-                        backgroundColor: buttonColor,
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: `${borderRadius}px`,
-                        padding: centerPadding ? '8px 16px' : '6px 12px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}>
-                        {buttonText}
-                      </button>
-                    </InlineStack>
-                  </div>
-                ))}
-              </BlockStack>
-            )}
+                    </div>
+                    <button style={{
+                      backgroundColor: "#1a73e8",
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: "8px",
+                      padding: '8px 16px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}>
+                      Add to cart
+                    </button>
+                  </InlineStack>
+                </div>
+              ))}
+            </BlockStack>
           </BlockStack>
         </Box>
       </Card>
@@ -616,21 +446,8 @@ export default function Upsell() {
 
   return (
     <Frame>
-      {hasChanges && (
-        <ContextualSaveBar
-          message="Unsaved changes"
-          saveAction={{
-            onAction: handleCreateUpsell,
-            loading: isLoading,
-            disabled: !upsellName.trim() || selectedProducts.length === 0,
-          }}
-          discardAction={{
-            onAction: handleDiscard,
-          }}
-        />
-      )}
       <Page>
-        <TitleBar title={editingUpsell ? "Edit Upsell Block" : "Create Upsell Block"} />
+        <TitleBar title={editingUpsell ? "Edit Checkout Upsell" : "Create Checkout Upsell"} />
       
       <BlockStack gap="500">
         {error && (
@@ -651,41 +468,27 @@ export default function Upsell() {
           </Banner>
         )}
 
-        {/* Checkout Placement Info Banner - temporarily disabled for testing */}
-        {placement === "checkout" && (
-          <Banner status="info">
-            <Text variant="bodyMd">
-              Checkout page placement is currently available for testing. This will require Pro plan in production.
+        {/* Checkout Upsell Information */}
+        <Banner status="info">
+          <BlockStack gap="200">
+            <Text variant="bodyMd" fontWeight="bold">
+              Checkout Upsell - One Upsell Per Store:
             </Text>
-          </Banner>
-        )}
+            <Text variant="bodyMd">
+              • You can create only one checkout upsell per store
+            </Text>
+            <Text variant="bodyMd">
+              • Maximum 5 products allowed (currently selected: {selectedProducts.length}/5)
+            </Text>
+            <Text variant="bodyMd">
+              • Products will be displayed automatically during checkout
+            </Text>
+          </BlockStack>
+        </Banner>
 
         <Layout>
           <Layout.Section>
             <BlockStack gap="400">
-              {/* Basic Settings */}
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingMd">
-                    Basic Settings
-                  </Text>
-                  
-                  <TextField
-                    label="Upsell Block Name"
-                    value={upsellName}
-                    onChange={setUpsellName}
-                    placeholder="e.g., Product Page Recommendations"
-                    helpText="This name is for your reference only"
-                  />
-
-                  <Select
-                    label="Placement"
-                    options={placementOptions}
-                    value={placement}
-                    onChange={setPlacement}
-                  />
-                </BlockStack>
-              </Card>
 
               {/* Display Settings */}
               <Card>
@@ -701,114 +504,10 @@ export default function Upsell() {
                     placeholder="Recommended for you"
                   />
 
-                  <Select
-                    label="Products to Show"
-                    options={[
-                      { label: "2 Products", value: "2" },
-                      { label: "3 Products", value: "3" },
-                      { label: "4 Products", value: "4" },
-                      { label: "5 Products", value: "5" },
-                      { label: "6 Products", value: "6" },
-                    ]}
-                    value={showProducts.toString()}
-                    onChange={(value) => setShowProducts(parseInt(value))}
-                  />
 
-                  <Checkbox
-                    label="Enable auto-slide"
-                    checked={enableAutoSlide}
-                    onChange={setEnableAutoSlide}
-                  />
                 </BlockStack>
               </Card>
 
-              {/* Style Settings */}
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingMd">
-                    Style & Layout Settings
-                  </Text>
-                  
-                  <Select
-                    label="Layout"
-                    options={[
-                      { label: "Slider Layout", value: "slider" },
-                      { label: "Stack Layout (Vertical)", value: "stack" },
-                    ]}
-                    value={layout}
-                    onChange={setLayout}
-                    helpText="Slider shows products side by side with navigation. Stack shows products vertically."
-                  />
-
-                  <InlineStack gap="400">
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Background Color"
-                        type="color"
-                        value={backgroundColor}
-                        onChange={setBackgroundColor}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Text Color"
-                        type="color"
-                        value={textColor}
-                        onChange={setTextColor}
-                      />
-                    </div>
-                  </InlineStack>
-
-                  <InlineStack gap="400">
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Button Color"
-                        type="color"
-                        value={buttonColor}
-                        onChange={setButtonColor}
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Button Text"
-                        value={buttonText}
-                        onChange={setButtonText}
-                        placeholder="Add"
-                      />
-                    </div>
-                  </InlineStack>
-
-                  <InlineStack gap="400">
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Border Radius (px)"
-                        type="number"
-                        value={borderRadius.toString()}
-                        onChange={(value) => setBorderRadius(parseInt(value) || 0)}
-                        min="0"
-                        max="50"
-                      />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <TextField
-                        label="Padding (px)"
-                        type="number"
-                        value={padding.toString()}
-                        onChange={(value) => setPadding(parseInt(value) || 0)}
-                        min="0"
-                        max="100"
-                      />
-                    </div>
-                  </InlineStack>
-
-                  <Checkbox
-                    label="Center Padding Mode"
-                    checked={centerPadding}
-                    onChange={setCenterPadding}
-                    helpText="Adds extra padding around product content for better spacing"
-                  />
-                </BlockStack>
-              </Card>
 
               {/* Product Selection */}
               <Card>
@@ -927,15 +626,6 @@ export default function Upsell() {
                   Preview
                 </Text>
                 <LivePreview />
-                {enableAutoSlide && (
-                  <Card>
-                    <Box padding="200">
-                      <Text variant="bodySm" color="subdued" alignment="center">
-                        🔄 Auto-sliding enabled
-                      </Text>
-                    </Box>
-                  </Card>
-                )}
               </BlockStack>
 
               {/* Action Buttons */}
@@ -945,39 +635,45 @@ export default function Upsell() {
                     Actions
                   </Text>
                   
-                  <BlockStack gap="200">
-                    <Button
-                      primary
-                      fullWidth
-                      onClick={handleCreateUpsell}
-                      loading={isLoading}
-                      disabled={isLoading || !upsellName.trim() || selectedProducts.length === 0}
-                    >
-                      {isLoading 
-                        ? (editingUpsell ? "Updating..." : "Creating...") 
-                        : (editingUpsell ? "Update Upsell Block" : "Create Upsell Block")
-                      }
-                    </Button>
-                    
-                    <Button fullWidth outline>
-                      Save as Draft
-                    </Button>
-                  </BlockStack>
+                  {!hasCreatedUpsell ? (
+                    <BlockStack gap="200">
+                      <Button
+                        primary
+                        fullWidth
+                        onClick={handleCreateUpsell}
+                        loading={isLoading}
+                        disabled={isLoading || selectedProducts.length === 0}
+                      >
+                        {isLoading 
+                          ? (editingUpsell ? "Updating..." : "Creating...") 
+                          : (editingUpsell ? "Update Checkout Upsell" : "Create Checkout Upsell")
+                        }
+                      </Button>
+                    </BlockStack>
+                  ) : (
+                    <BlockStack gap="200">
+                      <Banner status="success">
+                        <Text variant="bodyMd">
+                          ✅ Upsell created successfully! Your products will now show during checkout.
+                        </Text>
+                      </Banner>
+                    </BlockStack>
+                  )}
                   
                   <Divider />
                   
                   <BlockStack gap="200">
                     <Text variant="bodyMd" fontWeight="bold">
-                      Next Steps:
+                      How it works:
                     </Text>
                     <Text variant="bodySm" color="subdued">
-                      1. Create your upsell block
+                      • Your upsell products will automatically appear during the checkout process
                     </Text>
                     <Text variant="bodySm" color="subdued">
-                      2. Go to your theme customizer
+                      • Customers can add recommended products directly to their cart
                     </Text>
                     <Text variant="bodySm" color="subdued">
-                      3. Add the upsell block to your selected placement
+                      • No theme configuration needed - it works automatically
                     </Text>
                   </BlockStack>
                 </BlockStack>

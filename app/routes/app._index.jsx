@@ -35,7 +35,7 @@ export const loader = async ({ request }) => {
     try {
       const billingCheck = await billing.check({
         plans: [BASIC_PLAN],
-        isTest: true, // Set to false for production
+        isTest: true // Free for development stores
       });
       hasActiveSubscription = billingCheck.hasActivePayment;
     } catch (billingError) {
@@ -195,16 +195,18 @@ export default function Dashboard() {
           </Banner>
         )}
 
-        {/* Upgrade Banner for Free Users */}
-        {!hasActiveSubscription && upsellBlocks.length >= 3 && (
-          <Banner status="warning">
+        {/* Pro Plan Required Banner */}
+        {upsellBlocks.length > 0 && (
+          <Banner status="info">
             <InlineStack align="space-between" wrap={false}>
               <Text variant="bodyMd">
-                You've reached your free limit of 3 upsell blocks. Upgrade to Pro for unlimited blocks and checkout page placement.
+                Pro Plan Required: This app requires a Pro subscription for all stores except development stores.
               </Text>
-              <Link to="/app/billing">
-                <Button size="slim">Upgrade to Pro</Button>
-              </Link>
+              {!hasActiveSubscription && (
+                <Link to="/app/billing">
+                  <Button size="slim">Upgrade to Pro</Button>
+                </Link>
+              )}
             </InlineStack>
           </Banner>
         )}
@@ -213,32 +215,21 @@ export default function Dashboard() {
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <Text as="h2" variant="headingLg">
-                    Your Upsell Blocks
-                  </Text>
-                  <Link to="/app/upsell">
-                    <Button 
-                      primary 
-                      icon={PlusIcon}
-                      disabled={!hasActiveSubscription && upsellBlocks.length >= 3}
-                    >
-                      Create New Upsell
-                    </Button>
-                  </Link>
-                </InlineStack>
+                <Text as="h2" variant="headingLg">
+                  Your Checkout Upsell
+                </Text>
                 
                 {upsellBlocks.length === 0 ? (
                   <EmptyState
-                    heading="No upsell blocks created yet"
+                    heading="No checkout upsell created yet"
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                     action={{
-                      content: "Create your first upsell block",
+                      content: "Create your checkout upsell",
                       url: "/app/upsell"
                     }}
                   >
                     <Text variant="bodyMd" color="subdued">
-                      Create upsell blocks to recommend products to your customers and increase sales.
+                      Create a checkout upsell to recommend products during the checkout process and increase sales.
                     </Text>
                   </EmptyState>
                 ) : (
@@ -333,34 +324,28 @@ export default function Dashboard() {
                   
                   <BlockStack gap="300">
                     <InlineStack align="space-between">
-                      <Text variant="bodyMd">Total Upsell Blocks:</Text>
-                      <Text variant="bodyMd" fontWeight="bold">
-                        {upsellBlocks.length}
-                      </Text>
-                    </InlineStack>
-                    
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd">Active Blocks:</Text>
-                      <Text variant="bodyMd" fontWeight="bold">
-                        {upsellBlocks.filter(u => u.active).length}
-                      </Text>
-                    </InlineStack>
-                    
-                    <InlineStack align="space-between">
-                      <Text variant="bodyMd">Plan:</Text>
+                      <Text variant="bodyMd">Plan Status:</Text>
                       <Badge status={hasActiveSubscription ? "success" : "attention"}>
-                        {hasActiveSubscription ? "Pro" : "Free"}
+                        {hasActiveSubscription ? "Pro Plan" : "Development Store"}
                       </Badge>
                     </InlineStack>
                     
-                    {!hasActiveSubscription && (
-                      <InlineStack align="space-between">
-                        <Text variant="bodyMd">Usage:</Text>
-                        <Text variant="bodyMd" fontWeight="bold">
-                          {upsellBlocks.length}/3
-                        </Text>
-                      </InlineStack>
-                    )}
+                    <InlineStack align="space-between">
+                      <Text variant="bodyMd">Total Products in Upsell:</Text>
+                      <Text variant="bodyMd" fontWeight="bold">
+                        {upsellBlocks.reduce((total, upsell) => {
+                          const productCount = upsell.productHandles ? upsell.productHandles.split(',').filter(h => h.trim()).length : 0;
+                          return total + productCount;
+                        }, 0)}
+                      </Text>
+                    </InlineStack>
+                    
+                    <InlineStack align="space-between">
+                      <Text variant="bodyMd">Upsell Status:</Text>
+                      <Badge status={upsellBlocks.length > 0 && upsellBlocks[0]?.active ? "success" : "attention"}>
+                        {upsellBlocks.length > 0 ? (upsellBlocks[0]?.active ? "Active" : "Inactive") : "Not Created"}
+                      </Badge>
+                    </InlineStack>
                   </BlockStack>
                 </BlockStack>
               </Card>
@@ -373,15 +358,21 @@ export default function Dashboard() {
                   </Text>
                   
                   <BlockStack gap="200">
-                    <Link to="/app/upsell">
-                      <Button 
-                        fullWidth 
-                        primary
-                        disabled={!hasActiveSubscription && upsellBlocks.length >= 3}
-                      >
-                        Create New Upsell Block
-                      </Button>
-                    </Link>
+                    {upsellBlocks.length === 0 && (
+                      <Link to="/app/upsell">
+                        <Button fullWidth primary>
+                          Create Your Checkout Upsell
+                        </Button>
+                      </Link>
+                    )}
+                    
+                    {upsellBlocks.length > 0 && (
+                      <Link to={`/app/upsell?edit=${upsellBlocks[0].id}`}>
+                        <Button fullWidth primary>
+                          Edit Your Checkout Upsell
+                        </Button>
+                      </Link>
+                    )}
                     
                     <Link to="/app/billing">
                       <Button fullWidth outline>

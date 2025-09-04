@@ -26,7 +26,7 @@ export default extension(
     // Settings from API
     let apiSettings = {
       layout: 'slider',
-      showCount: 2,
+      showCount: 4,
       backgroundColor: '#ffffff',
       textColor: '#000000',
       buttonColor: '#1a73e8',
@@ -311,10 +311,11 @@ export default extension(
         const shopDomain = shop?.myshopifyDomain || shop?.domain;
         console.log('🏪 Shop domain detected:', shopDomain);
         
-        // Try multiple possible API endpoints
+        // Try multiple possible URLs
         const apiUrls = [
-          `https://safari-recommend-documentary-fishing.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`,
-          `https://boc-wagner-writer-morning.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`
+          `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+          `https://consisting-came-extension-alternative.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`,
+          `http://localhost:59213/api/upsells?shop=${shopDomain}&placement=checkout`
         ];
         
         // Log available environment info for debugging
@@ -370,9 +371,13 @@ export default extension(
         
         console.log('🛍️ Product handles to fetch:', data.productHandles);
         
+        // Limit to maximum 5 products for checkout placement
+        const limitedHandles = data.productHandles.slice(0, 5);
+        console.log(`📊 Limited to ${limitedHandles.length} products for checkout`);
+        
         // Query products using Storefront API
         const productsData = await Promise.all(
-          data.productHandles.map(async (handle) => {
+          limitedHandles.map(async (handle) => {
             try {
               console.log(`🔍 Querying product: ${handle}`);
               

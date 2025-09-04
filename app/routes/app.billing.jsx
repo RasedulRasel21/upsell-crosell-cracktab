@@ -168,10 +168,12 @@ export default function Billing() {
     error,
   } = data;
 
-  const FREE_UPSELL_LIMIT = 3;
-  const upsellUsagePercentage = (upsellBlocksCount / FREE_UPSELL_LIMIT) * 100;
-  const isNearUpsellLimit = upsellBlocksCount >= 2;
-  const isOverUpsellLimit = upsellBlocksCount >= FREE_UPSELL_LIMIT && !hasActiveSubscription;
+  // Check if this is a development store
+  const isDevelopmentStore = data.shop && data.shop.includes('.myshopify.com');
+  const isFreeForDevelopment = isDevelopmentStore;
+  
+  // For production stores, Pro plan is required for any upsells
+  const requiresProPlan = !isDevelopmentStore && !hasActiveSubscription;
 
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -237,9 +239,9 @@ export default function Billing() {
                       Current Usage
                     </Text>
                     <Badge 
-                      status={hasActiveSubscription ? "success" : isOverUpsellLimit ? "critical" : isNearUpsellLimit ? "attention" : "info"}
+                      status={hasActiveSubscription ? "success" : isFreeForDevelopment ? "info" : "attention"}
                     >
-                      {hasActiveSubscription ? "Pro Plan" : "Free Plan"}
+                      {hasActiveSubscription ? "Pro Plan" : isFreeForDevelopment ? "Free (Dev Store)" : "Pro Required"}
                     </Badge>
                   </InlineStack>
 
@@ -249,39 +251,24 @@ export default function Billing() {
                         Upsell blocks created
                       </Text>
                       <Text variant="bodyMd" fontWeight="bold">
-                        {upsellBlocksCount} / {hasActiveSubscription ? "Unlimited" : FREE_UPSELL_LIMIT}
+                        {upsellBlocksCount} / {hasActiveSubscription || isFreeForDevelopment ? "1 (Checkout)" : "Pro Required"}
                       </Text>
                     </InlineStack>
 
-                    {!hasActiveSubscription && (
-                      <BlockStack gap="200">
-                        <ProgressBar
-                          progress={Math.min(upsellUsagePercentage, 100)}
-                          size="small"
-                          color={isOverUpsellLimit ? "critical" : isNearUpsellLimit ? "highlight" : "success"}
-                        />
-                        <Text variant="bodySm" color="subdued">
-                          {FREE_UPSELL_LIMIT - upsellBlocksCount > 0 
-                            ? `You can create ${FREE_UPSELL_LIMIT - upsellBlocksCount} more upsell blocks`
-                            : "You've reached your free limit of 3 upsell blocks"
-                          }
-                        </Text>
-                      </BlockStack>
-                    )}
-
-                    {isOverUpsellLimit && (
-                      <Banner status="critical">
+                    {!hasActiveSubscription && !isFreeForDevelopment && (
+                      <Banner status="attention">
                         <Text variant="bodyMd">
-                          You've reached your free limit of {FREE_UPSELL_LIMIT} upsell blocks. 
-                          Upgrade to Pro for unlimited blocks and checkout page placement.
+                          <strong>Production Store:</strong> Pro plan required to create upsells. 
+                          Development stores get free access with 1 checkout upsell.
                         </Text>
                       </Banner>
                     )}
 
-                    {isNearUpsellLimit && !hasActiveSubscription && !isOverUpsellLimit && (
-                      <Banner status="warning">
+                    {isFreeForDevelopment && !hasActiveSubscription && (
+                      <Banner status="info">
                         <Text variant="bodyMd">
-                          You're approaching your free limit of 3 upsell blocks. Consider upgrading to Pro for unlimited blocks.
+                          <strong>Development Store:</strong> You can create 1 checkout upsell for free. 
+                          Upgrade to Pro for unlimited features.
                         </Text>
                       </Banner>
                     )}
@@ -308,7 +295,7 @@ export default function Billing() {
                     <InlineStack align="space-between">
                       <Text variant="bodyMd">Block limit</Text>
                       <Text variant="bodyMd" fontWeight="bold" color={hasActiveSubscription ? "success" : "subdued"}>
-                        {hasActiveSubscription ? "Unlimited ✓" : `${FREE_UPSELL_LIMIT} max`}
+                        {hasActiveSubscription ? "1 Checkout Upsell ✓" : isFreeForDevelopment ? "1 (Free for Dev)" : "Pro Required"}
                       </Text>
                     </InlineStack>
                     {currentSubscription && (
@@ -327,29 +314,29 @@ export default function Billing() {
 
           <Layout.Section variant="oneThird">
             <BlockStack gap="400">
-              {/* Free Plan Card */}
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h3" variant="headingMd">
-                    Free Plan
-                  </Text>
-                  
-                  <InlineStack gap="100" align="start">
-                    <Text variant="headingXl">$0</Text>
-                    <Text variant="bodyMd" color="subdued"> /month</Text>
-                  </InlineStack>
+              {/* Development Store Info */}
+              {isFreeForDevelopment && (
+                <Card>
+                  <BlockStack gap="400">
+                    <Text as="h3" variant="headingMd">
+                      Development Store
+                    </Text>
+                    
+                    <InlineStack gap="100" align="start">
+                      <Text variant="headingXl">FREE</Text>
+                    </InlineStack>
 
-                  <List>
-                    <List.Item>Up to 3 upsell blocks</List.Item>
-                    <List.Item>Basic upsell blocks</List.Item>
-                    <List.Item>Product page placement</List.Item>
-                  </List>
+                    <List>
+                      <List.Item>1 checkout upsell block</List.Item>
+                      <List.Item>Up to 5 products per upsell</List.Item>
+                      <List.Item>Automatic checkout integration</List.Item>
+                      <List.Item>Perfect for testing & development</List.Item>
+                    </List>
 
-                  {!hasActiveSubscription && (
-                    <Badge status="success">✓ Current Plan</Badge>
-                  )}
-                </BlockStack>
-              </Card>
+                    <Badge status="success">✓ Active</Badge>
+                  </BlockStack>
+                </Card>
+              )}
 
               {/* Pro Plan Card */}
               <Card>
@@ -369,12 +356,11 @@ export default function Billing() {
                   </InlineStack>
 
                   <List>
-                    <List.Item>Unlimited upsell blocks</List.Item>
-                    <List.Item>All placement options</List.Item>
-                    <List.Item>Advanced customization</List.Item>
-                    <List.Item>Checkout page upsells</List.Item>
+                    <List.Item>One checkout upsell block</List.Item>
+                    <List.Item>Up to 5 products per upsell</List.Item>
+                    <List.Item>Automatic checkout integration</List.Item>
                     <List.Item>Priority support</List.Item>
-                    <List.Item>Advanced analytics</List.Item>
+                    <List.Item>Free for development stores</List.Item>
                   </List>
 
                   {!hasActiveSubscription ? (
@@ -414,10 +400,10 @@ export default function Billing() {
                   <BlockStack gap="300">
                     <BlockStack gap="100">
                       <Text variant="bodyMd" fontWeight="bold">
-                        What's the difference between Free and Pro?
+                        Is it free for development stores?
                       </Text>
                       <Text variant="bodyMd" color="subdued">
-                        Free: 3 upsell blocks, basic placements. Pro: Unlimited blocks + checkout page placement.
+                        Yes! Development stores get full access with 1 checkout upsell for free. Perfect for testing.
                       </Text>
                     </BlockStack>
 
@@ -425,10 +411,10 @@ export default function Billing() {
 
                     <BlockStack gap="100">
                       <Text variant="bodyMd" fontWeight="bold">
-                        Can I place upsells on checkout page?
+                        What about production stores?
                       </Text>
                       <Text variant="bodyMd" color="subdued">
-                        Checkout page placement is only available with Pro plan for compliance and quality reasons.
+                        Production stores require the Pro plan ($15/month) to create checkout upsells.
                       </Text>
                     </BlockStack>
 
@@ -436,10 +422,10 @@ export default function Billing() {
 
                     <BlockStack gap="100">
                       <Text variant="bodyMd" fontWeight="bold">
-                        What happens if I exceed 3 blocks?
+                        How many upsells can I create?
                       </Text>
                       <Text variant="bodyMd" color="subdued">
-                        You'll need to upgrade to Pro plan to create more than 3 upsell blocks.
+                        You can create 1 checkout upsell with up to 5 products. This keeps your checkout clean and focused.
                       </Text>
                     </BlockStack>
 

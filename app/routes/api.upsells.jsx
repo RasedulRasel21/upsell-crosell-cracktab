@@ -4,7 +4,12 @@ export const loader = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const shop = url.searchParams.get("shop");
-    const placement = url.searchParams.get("placement") || "product_page";
+    const placement = url.searchParams.get("placement") || "checkout";
+    
+    // Only allow checkout placement
+    if (placement !== "checkout") {
+      return json({ error: "Only checkout placement is supported" }, { status: 400 });
+    }
     const callback = url.searchParams.get("callback"); // JSONP support
     
     if (!shop) {
@@ -42,6 +47,7 @@ export const loader = async ({ request }) => {
       slideDuration: upsellBlock.slideDuration,
       // Style settings
       layout: upsellBlock.layout,
+      columns: upsellBlock.columns,
       backgroundColor: upsellBlock.backgroundColor,
       textColor: upsellBlock.textColor,
       buttonColor: upsellBlock.buttonColor,
