@@ -3,7 +3,7 @@
 client_id = "304952a9812404378c88092ac78264ff"
 name = "Upsell Cross Sell Booster"
 handle = "upsell-cross-sell-booster"
-application_url = "https://emerging-blocking-calendar-tour.trycloudflare.com"
+application_url = "https://upsell-cross-sell-cracktab.fly.dev"
 embedded = true
 
 [env]
@@ -13,7 +13,7 @@ SHOPIFY_API_KEY = "304952a9812404378c88092ac78264ff"
 SCOPES = "read_products,unauthenticated_write_checkouts"
 
 [build]
-automatically_update_urls_on_dev = true
+automatically_update_urls_on_dev = false
 include_config_on_deploy = true
 
 [webhooks]
@@ -33,9 +33,9 @@ scopes = "read_products,unauthenticated_write_checkouts"
 
 [auth]
 redirect_urls = [
-  "https://emerging-blocking-calendar-tour.trycloudflare.com/auth/callback",
-  "https://emerging-blocking-calendar-tour.trycloudflare.com/auth/shopify/callback",
-  "https://emerging-blocking-calendar-tour.trycloudflare.com/api/auth/callback"
+  "https://upsell-cross-sell-cracktab.fly.dev/auth/callback",
+  "https://upsell-cross-sell-cracktab.fly.dev/auth/shopify/callback",
+  "https://upsell-cross-sell-cracktab.fly.dev/api/auth/callback"
 ]
 
 [pos]
