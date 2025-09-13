@@ -1,0 +1,35 @@
+# Staging configuration for Shopify app
+# Update with your staging app's client ID
+
+client_id = "6b9e2a7c98e68418ac8f3effc79113b2"
+name = "Upsell Booster - Staging"
+handle = "upsell-cross-sell-booster-staging"
+application_url = "https://upsell-cross-sell-booster-st.fly.dev"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = false
+
+[webhooks]
+api_version = "2025-07"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+scopes = "read_orders,read_products,unauthenticated_write_checkouts"
+
+[auth]
+redirect_urls = [
+  "https://upsell-cross-sell-booster-st.fly.dev/auth/callback",
+  "https://upsell-cross-sell-booster-st.fly.dev/auth/shopify/callback",
+  "https://upsell-cross-sell-booster-st.fly.dev/api/auth/callback"
+]
+
+[pos]
+embedded = false

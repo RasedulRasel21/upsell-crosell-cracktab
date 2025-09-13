@@ -210,7 +210,8 @@ export const action = async ({ request }) => {
         backgroundColor: "#ffffff",
         textColor: "#000000",
         buttonColor: "#1a73e8",
-        buttonText: "Add to cart",
+        buttonText: displaySettings.buttonText || "Add",
+        properties: displaySettings.properties || "",
         borderRadius: 8,
         padding: 16,
         centerPadding: true,
@@ -270,6 +271,8 @@ export default function Upsell() {
   // State management
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [sliderTitle, setSliderTitle] = useState("Recommended for you");
+  const [buttonText, setButtonText] = useState("Add");
+  const [properties, setProperties] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [hasCreatedUpsell, setHasCreatedUpsell] = useState(false);
 
@@ -277,19 +280,21 @@ export default function Upsell() {
   useEffect(() => {
     if (editingUpsell) {
       setSliderTitle(editingUpsell.title || "Recommended for you");
-      
+      setButtonText(editingUpsell.buttonText || "Add");
+      setProperties(editingUpsell.properties || "");
+
       // Convert product handles to product IDs for selection
       let productIds = [];
       if (editingUpsell.productHandles) {
         const handles = editingUpsell.productHandles.split(',').map(h => h.trim()).filter(h => h);
-        
+
         handles.forEach(handle => {
           const product = products.find(p => p.handle === handle);
           if (product) {
             productIds.push(product.id);
           }
         });
-        
+
         setSelectedProducts(productIds);
       }
     }
@@ -343,6 +348,8 @@ export default function Upsell() {
     formData.append("selectedProducts", JSON.stringify(selectedProducts));
     formData.append("displaySettings", JSON.stringify({
       sliderTitle,
+      buttonText,
+      properties,
     }));
     
     if (editingUpsell) {
@@ -504,6 +511,22 @@ export default function Upsell() {
                     placeholder="Recommended for you"
                   />
 
+                  <TextField
+                    label="Add to Cart Button Text"
+                    value={buttonText}
+                    onChange={setButtonText}
+                    placeholder="Add"
+                    helpText="Customize the text displayed on the add to cart button"
+                  />
+
+                  <TextField
+                    label="Custom Properties"
+                    value={properties}
+                    onChange={setProperties}
+                    placeholder='{"bag_type":"gift", "_product_type":"other"}'
+                    helpText="Add custom properties as JSON that will be passed with upsell products"
+                    multiline={3}
+                  />
 
                 </BlockStack>
               </Card>

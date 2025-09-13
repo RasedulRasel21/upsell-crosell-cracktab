@@ -52,6 +52,7 @@ export const loader = async ({ request }) => {
       textColor: upsellBlock.textColor,
       buttonColor: upsellBlock.buttonColor,
       buttonText: upsellBlock.buttonText,
+      properties: upsellBlock.properties,
       borderRadius: upsellBlock.borderRadius,
       padding: upsellBlock.padding,
       centerPadding: upsellBlock.centerPadding,

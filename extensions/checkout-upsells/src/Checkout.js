@@ -34,7 +34,8 @@ export default extension(
       padding: 16,
       centerPadding: true,
       buttonText: 'Add',
-      title: 'Recommended for you'
+      title: 'Recommended for you',
+      properties: ''
     };
 
     // Create main container
@@ -216,10 +217,32 @@ export default extension(
       buttonComponent.updateProps({ loading: true, disabled: true });
       
       try {
+        // Parse custom properties if they exist and convert to array format
+        let customAttributes = [];
+        console.log('🔍 Properties available in apiSettings:', apiSettings.properties);
+
+        if (apiSettings.properties) {
+          try {
+            const propertiesObj = JSON.parse(apiSettings.properties);
+            // Convert object to array of {key, value} objects
+            customAttributes = Object.entries(propertiesObj).map(([key, value]) => ({
+              key: key,
+              value: String(value)
+            }));
+            console.log('✅ Using custom properties:', customAttributes);
+          } catch (error) {
+            console.warn('⚠️ Invalid properties JSON, skipping:', apiSettings.properties);
+            console.error('JSON Parse Error:', error);
+          }
+        } else {
+          console.log('ℹ️ No properties found in apiSettings');
+        }
+
         const result = await applyCartLinesChange({
           type: 'addCartLine',
           merchandiseId: variant.id,
           quantity: 1,
+          attributes: customAttributes,
         });
         
         if (result.type === 'success') {
@@ -313,6 +336,7 @@ export default extension(
         
         // Try multiple possible URLs
         const apiUrls = [
+          `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
           `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
           `https://consisting-came-extension-alternative.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`,
           `http://localhost:59213/api/upsells?shop=${shopDomain}&placement=checkout`
@@ -346,11 +370,16 @@ export default extension(
         const data = await response.json();
         
         console.log('📦 Checkout upsell API response:', data);
-        
+        console.log('🔍 Properties from API:', data.properties);
+
         // Update settings from API
         if (data.title) apiSettings.title = data.title;
         if (data.showCount) apiSettings.showCount = data.showCount;
         if (data.buttonText) apiSettings.buttonText = data.buttonText;
+        if (data.properties) {
+          apiSettings.properties = data.properties;
+          console.log('✅ Properties set in apiSettings:', apiSettings.properties);
+        }
         if (data.layout) apiSettings.layout = data.layout;
         if (data.backgroundColor) apiSettings.backgroundColor = data.backgroundColor;
         if (data.textColor) apiSettings.textColor = data.textColor;
