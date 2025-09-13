@@ -45,7 +45,7 @@ export const PLANS = {
     upsellLimit: 1, // One checkout upsell only
     features: [
       "One checkout upsell",
-      "Up to 5 products per upsell", 
+      "Up to 10 products per upsell", 
       "Automatic checkout integration",
       "Priority support",
       "Free for development stores"

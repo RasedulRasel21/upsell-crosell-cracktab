@@ -18,6 +18,8 @@
     "setup": "prisma generate && prisma migrate deploy",
     "setup:dev": "DATABASE_URL=file:dev.sqlite prisma generate && DATABASE_URL=file:dev.sqlite prisma migrate dev --name init",
     "setup:staging": "DATABASE_URL=file:/data/staging.sqlite prisma generate && DATABASE_URL=file:/data/staging.sqlite prisma migrate deploy",
+    "backup:prod": "node backup-db.js",
+    "backup:restore": "node backup-db.js --restore",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "shopify",
     "prisma": "prisma",

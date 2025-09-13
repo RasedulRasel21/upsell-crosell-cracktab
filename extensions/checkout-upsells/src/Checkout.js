@@ -400,8 +400,8 @@ export default extension(
         
         console.log('🛍️ Product handles to fetch:', data.productHandles);
         
-        // Limit to maximum 5 products for checkout placement
-        const limitedHandles = data.productHandles.slice(0, 5);
+        // Limit to maximum 10 products for checkout placement
+        const limitedHandles = data.productHandles.slice(0, 10);
         console.log(`📊 Limited to ${limitedHandles.length} products for checkout`);
         
         // Query products using Storefront API

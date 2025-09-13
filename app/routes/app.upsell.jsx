@@ -300,10 +300,10 @@ export default function Upsell() {
     }
   }, [editingUpsell, products]);
 
-  // Limit products to 5 for checkout
+  // Limit products to 10 for checkout
   useEffect(() => {
-    if (selectedProducts.length > 5) {
-      setSelectedProducts(prev => prev.slice(0, 5));
+    if (selectedProducts.length > 10) {
+      setSelectedProducts(prev => prev.slice(0, 10));
     }
   }, [selectedProducts]);
   
@@ -323,8 +323,8 @@ export default function Upsell() {
         // Remove product
         return prev.filter(id => id !== productId);
       } else {
-        // Add product (with limit check for checkout - max 5)
-        if (prev.length >= 5) {
+        // Add product (with limit check for checkout - max 10)
+        if (prev.length >= 10) {
           return prev; // Don't add if already at limit
         }
         return [...prev, productId];
@@ -485,7 +485,7 @@ export default function Upsell() {
               • You can create only one checkout upsell per store
             </Text>
             <Text variant="bodyMd">
-              • Maximum 5 products allowed (currently selected: {selectedProducts.length}/5)
+              • Maximum 10 products allowed (currently selected: {selectedProducts.length}/10)
             </Text>
             <Text variant="bodyMd">
               • Products will be displayed automatically during checkout
