@@ -391,22 +391,117 @@ export default extension(
         // Update title
         titleElement.replaceChildren(apiSettings.title);
         
-        if (!data.productHandles || data.productHandles.length === 0) {
-          console.log('⚠️ No product handles returned from API');
+        let productsToFetch = [];
+        let fetchMethod = '';
+
+        // Check if we have collection handle (new approach)
+        if (data.collectionHandle) {
+          console.log('🛍️ Fetching products from collection:', data.collectionHandle);
+          fetchMethod = 'collection';
+
+          // Fetch products from collection using Storefront API
+          try {
+            const collectionQuery = await query(
+              `query getCollectionProducts($handle: String!, $first: Int!) {
+                collection(handle: $handle) {
+                  id
+                  title
+                  products(first: $first) {
+                    edges {
+                      node {
+                        id
+                        title
+                        handle
+                        description
+                        featuredImage {
+                          url
+                          altText
+                        }
+                        variants(first: 1) {
+                          edges {
+                            node {
+                              id
+                              title
+                              availableForSale
+                              price {
+                                amount
+                                currencyCode
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`,
+              { variables: { handle: data.collectionHandle, first: data.showCount || 10 } }
+            );
+
+            const collectionData = collectionQuery.data?.collection;
+            console.log('🔍 Collection query result:', collectionQuery);
+
+            if (collectionData?.products?.edges?.length > 0) {
+              productsToFetch = collectionData.products.edges.map(edge => edge.node);
+              console.log(`📊 Found ${productsToFetch.length} products in collection`);
+            } else {
+              console.log('⚠️ No products found in collection. Reasons could be:');
+              console.log('   1. Collection does not exist');
+              console.log('   2. Collection exists but has no products');
+              console.log('   3. All products in collection are out of stock');
+              console.log('🔄 Falling back to product handles if available...');
+
+              // Try to fall back to product handles if available
+              if (data.productHandles && data.productHandles.length > 0) {
+                console.log('✅ Using product handles as fallback:', data.productHandles);
+                fetchMethod = 'handles';
+                productsToFetch = data.productHandles.slice(0, 10);
+              } else {
+                console.log('❌ No fallback product handles available');
+                loading = false;
+                renderProducts();
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error fetching collection products:', error);
+            loading = false;
+            renderProducts();
+            return;
+          }
+        }
+        // Fallback to old product handles approach for backward compatibility
+        else if (data.productHandles && data.productHandles.length > 0) {
+          console.log('🛍️ Product handles to fetch:', data.productHandles);
+          fetchMethod = 'handles';
+
+          // Limit to maximum 10 products for checkout placement
+          const limitedHandles = data.productHandles.slice(0, 10);
+          console.log(`📊 Limited to ${limitedHandles.length} products for checkout`);
+          productsToFetch = limitedHandles;
+        }
+        // No products to fetch
+        else {
+          console.log('⚠️ No product handles or collection handle returned from API');
           loading = false;
           renderProducts();
           return;
         }
         
-        console.log('🛍️ Product handles to fetch:', data.productHandles);
-        
-        // Limit to maximum 10 products for checkout placement
-        const limitedHandles = data.productHandles.slice(0, 10);
-        console.log(`📊 Limited to ${limitedHandles.length} products for checkout`);
-        
-        // Query products using Storefront API
-        const productsData = await Promise.all(
-          limitedHandles.map(async (handle) => {
+        // Process products based on fetch method
+        let productsData = [];
+
+        if (fetchMethod === 'collection') {
+          // Products already fetched from collection
+          productsData = productsToFetch.filter(product => {
+            // Filter out unavailable products
+            const variant = product.variants?.edges?.[0]?.node;
+            return variant?.availableForSale;
+          });
+        } else if (fetchMethod === 'handles') {
+          // Query products using Storefront API by handles (legacy)
+          productsData = await Promise.all(
+            productsToFetch.map(async (handle) => {
             try {
               console.log(`🔍 Querying product: ${handle}`);
               
@@ -451,8 +546,11 @@ export default extension(
             }
           })
         );
-        
-        upsellProducts = productsData.filter(Boolean);
+
+        productsData = productsData.filter(Boolean);
+        }
+
+        upsellProducts = productsData;
         console.log(`🎯 Final valid products (${upsellProducts.length}):`, upsellProducts.map(p => p.title));
         
       } catch (error) {

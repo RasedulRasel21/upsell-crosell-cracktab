@@ -44,41 +44,40 @@ export const loader = async ({ request }) => {
       hasActiveSubscription = false;
     }
     
-    // Fetch products for upsell selection
-    const productsResponse = await admin.graphql(
+    // Fetch collections for upsell selection
+    const collectionsResponse = await admin.graphql(
       `#graphql
         query {
-          products(first: 50) {
+          collections(first: 50) {
             edges {
               node {
                 id
                 title
                 handle
-                status
-                totalInventory
-                priceRangeV2 {
-                  minVariantPrice {
-                    amount
-                    currencyCode
-                  }
+                productsCount {
+                  count
                 }
-                media(first: 1) {
-                  edges {
-                    node {
-                      preview {
-                        image {
-                          url
-                          altText
-                        }
-                      }
-                    }
-                  }
+                image {
+                  url
+                  altText
                 }
-                variants(first: 1) {
+                products(first: 3) {
                   edges {
                     node {
                       id
-                      price
+                      title
+                      media(first: 1) {
+                        edges {
+                          node {
+                            preview {
+                              image {
+                                url
+                                altText
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -88,10 +87,14 @@ export const loader = async ({ request }) => {
         }`
     );
 
-    console.log("Upsell products response:", JSON.stringify(productsResponse, null, 2));
-    
-    const result = await productsResponse.json();
-    const products = result?.data?.products?.edges?.map(edge => edge.node) || [];
+    console.log("Upsell collections response:", JSON.stringify(collectionsResponse, null, 2));
+
+    const result = await collectionsResponse.json();
+    const collections = result?.data?.collections?.edges?.map(edge => ({
+      ...edge.node,
+      productsCount: edge.node.productsCount?.count || 0,
+      sampleProducts: edge.node.products?.edges?.map(productEdge => productEdge.node) || []
+    })) || [];
     
     // Fetch existing upsell blocks for this shop
     let editingUpsell = null;
@@ -119,12 +122,12 @@ export const loader = async ({ request }) => {
         });
       }
       
-      console.log("Processed products count:", products.length);
+      console.log("Processed collections count:", collections.length);
       console.log("Existing upsell blocks:", upsellBlocks.length);
       console.log("Editing upsell:", editingUpsell);
-      
+
       return {
-        products,
+        collections,
         upsellBlocks,
         editingUpsell,
         hasActiveSubscription,
@@ -133,7 +136,7 @@ export const loader = async ({ request }) => {
     } catch (error) {
       console.log("Database query failed:", error);
       return {
-        products,
+        collections,
         upsellBlocks: [],
         editingUpsell: null,
         hasActiveSubscription,
@@ -159,36 +162,34 @@ export const action = async ({ request }) => {
     const actionType = formData.get("actionType");
 
     if (actionType === "create_upsell" || actionType === "update_upsell") {
-      const selectedProducts = JSON.parse(formData.get("selectedProducts") || "[]");
+      const selectedCollection = formData.get("selectedCollection");
       const displaySettings = JSON.parse(formData.get("displaySettings") || "{}");
       const upsellId = formData.get("upsellId");
-      
-      // Convert product IDs to handles
-      const productHandles = [];
-      
-      for (const productId of selectedProducts) {
-        // If it's already a handle (string), use it directly
-        if (typeof productId === 'string' && !productId.startsWith('gid://')) {
-          productHandles.push(productId);
+
+      // Get collection handle from GraphQL ID
+      let collectionHandle = "";
+      if (selectedCollection) {
+        if (typeof selectedCollection === 'string' && !selectedCollection.startsWith('gid://')) {
+          collectionHandle = selectedCollection;
         } else {
           // It's a GraphQL ID, fetch the handle
           try {
-            const productResponse = await admin.graphql(
+            const collectionResponse = await admin.graphql(
               `#graphql
-                query getProductHandle($id: ID!) {
-                  product(id: $id) {
+                query getCollectionHandle($id: ID!) {
+                  collection(id: $id) {
                     handle
                   }
                 }`,
-              { variables: { id: productId } }
+              { variables: { id: selectedCollection } }
             );
-            
-            const productResult = await productResponse.json();
-            if (productResult?.data?.product?.handle) {
-              productHandles.push(productResult.data.product.handle);
+
+            const collectionResult = await collectionResponse.json();
+            if (collectionResult?.data?.collection?.handle) {
+              collectionHandle = collectionResult.data.collection.handle;
             }
           } catch (error) {
-            console.warn("Error fetching product handle for:", productId, error);
+            console.warn("Error fetching collection handle for:", selectedCollection, error);
           }
         }
       }
@@ -199,9 +200,10 @@ export const action = async ({ request }) => {
         shop: session.shop,
         name: `Checkout Upsell - ${new Date().toLocaleDateString()}`,
         placement: "checkout",
-        productHandles: productHandles.join(','),
+        productHandles: null, // Keep for backward compatibility
+        collectionHandle: collectionHandle,
         title: displaySettings.sliderTitle || "Recommended for you",
-        showCount: selectedProducts.length,
+        showCount: displaySettings.showCount || 10,
         autoSlide: false,
         slideDuration: 5,
         // Style settings - default values for checkout
@@ -248,8 +250,8 @@ export const action = async ({ request }) => {
         // Return success anyway for now
         return {
           success: true,
-          message: `Upsell block ${actionType === "update_upsell" ? "updated" : "created"} successfully! (Products: ${productHandles.join(', ')})`,
-          productHandles,
+          message: `Upsell block ${actionType === "update_upsell" ? "updated" : "created"} successfully! (Collection: ${collectionHandle})`,
+          collectionHandle,
         };
       }
     }
@@ -266,12 +268,13 @@ export const action = async ({ request }) => {
 export default function Upsell() {
   const data = useLoaderData();
   const fetcher = useFetcher();
-  const { products = [], upsellBlocks = [], editingUpsell = null, hasActiveSubscription = false, error } = data;
+  const { collections = [], upsellBlocks = [], editingUpsell = null, hasActiveSubscription = false, error } = data;
 
   // State management
-  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectedCollection, setSelectedCollection] = useState("");
   const [sliderTitle, setSliderTitle] = useState("Recommended for you");
   const [buttonText, setButtonText] = useState("Add");
+  const [showCount, setShowCount] = useState(10);
   const [properties, setProperties] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [hasCreatedUpsell, setHasCreatedUpsell] = useState(false);
@@ -282,30 +285,19 @@ export default function Upsell() {
       setSliderTitle(editingUpsell.title || "Recommended for you");
       setButtonText(editingUpsell.buttonText || "Add");
       setProperties(editingUpsell.properties || "");
+      setShowCount(editingUpsell.showCount || 10);
 
-      // Convert product handles to product IDs for selection
-      let productIds = [];
-      if (editingUpsell.productHandles) {
-        const handles = editingUpsell.productHandles.split(',').map(h => h.trim()).filter(h => h);
-
-        handles.forEach(handle => {
-          const product = products.find(p => p.handle === handle);
-          if (product) {
-            productIds.push(product.id);
-          }
-        });
-
-        setSelectedProducts(productIds);
+      // Set selected collection if available
+      if (editingUpsell.collectionHandle) {
+        const collection = collections.find(c => c.handle === editingUpsell.collectionHandle);
+        if (collection) {
+          setSelectedCollection(collection.id);
+        }
       }
     }
-  }, [editingUpsell, products]);
+  }, [editingUpsell, collections]);
 
-  // Limit products to 10 for checkout
-  useEffect(() => {
-    if (selectedProducts.length > 10) {
-      setSelectedProducts(prev => prev.slice(0, 10));
-    }
-  }, [selectedProducts]);
+  // No longer needed since we're using collections
   
   // Handle successful creation
   useEffect(() => {
@@ -315,41 +307,29 @@ export default function Upsell() {
   }, [fetcher.data?.success, editingUpsell]);
 
 
-  const handleProductSelection = useCallback((productId) => {
-    setSelectedProducts(prev => {
-      const isCurrentlySelected = prev.includes(productId);
-      
-      if (isCurrentlySelected) {
-        // Remove product
-        return prev.filter(id => id !== productId);
-      } else {
-        // Add product (with limit check for checkout - max 10)
-        if (prev.length >= 10) {
-          return prev; // Don't add if already at limit
-        }
-        return [...prev, productId];
-      }
-    });
+  const handleCollectionSelection = useCallback((collectionId) => {
+    setSelectedCollection(collectionId);
   }, []);
 
-  // Filter products based on search
-  const filteredProducts = products.filter(product =>
-    product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.handle.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter collections based on search
+  const filteredCollections = collections.filter(collection =>
+    collection.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    collection.handle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleCreateUpsell = () => {
-    if (selectedProducts.length === 0) {
+    if (!selectedCollection) {
       return;
     }
 
     const formData = new FormData();
     formData.append("actionType", editingUpsell ? "update_upsell" : "create_upsell");
-    formData.append("selectedProducts", JSON.stringify(selectedProducts));
+    formData.append("selectedCollection", selectedCollection);
     formData.append("displaySettings", JSON.stringify({
       sliderTitle,
       buttonText,
       properties,
+      showCount,
     }));
     
     if (editingUpsell) {
@@ -364,17 +344,14 @@ export default function Upsell() {
 
   // Live Preview Component
   const LivePreview = () => {
-    const selectedProductsData = selectedProducts
-      .map(productId => products.find(p => p.id === productId))
-      .filter(Boolean)
-;
+    const selectedCollectionData = collections.find(c => c.id === selectedCollection);
 
-    if (selectedProductsData.length === 0) {
+    if (!selectedCollectionData) {
       return (
         <Card>
           <Box padding="400">
             <Text variant="bodyMd" color="subdued" alignment="center">
-              Select products to see preview
+              Select a collection to see preview
             </Text>
           </Box>
         </Card>
@@ -397,12 +374,12 @@ export default function Upsell() {
               {sliderTitle}
             </Text>
             <Text variant="bodySm" style={{ color: "#000000", opacity: 0.7 }}>
-              Products will appear during checkout:
+              Products from "{selectedCollectionData.title}" collection ({selectedCollectionData.productsCount} products) will appear during checkout
             </Text>
-            
+
             <BlockStack gap="200">
-              {selectedProductsData.map((product, index) => (
-                <div key={product.id} style={{ 
+              {selectedCollectionData.sampleProducts.slice(0, 3).map((product, index) => (
+                <div key={product.id} style={{
                   backgroundColor: "#ffffff",
                   border: '1px solid #e1e1e1',
                   borderRadius: "8px",
@@ -420,14 +397,14 @@ export default function Upsell() {
                       fontSize: '10px',
                       color: '#666'
                     }}>
-                      IMG
+                      {product.media?.[0]?.preview?.image?.url ? 'IMG' : 'NO IMG'}
                     </div>
                     <div style={{ flex: 1 }}>
                       <Text variant="bodyMd" style={{ color: "#000000" }}>
-                        Product {index + 1}
+                        {product.title}
                       </Text>
                       <Text variant="bodyMd" style={{ color: "#000000" }}>
-                        $10.00
+                        Sample product
                       </Text>
                     </div>
                     <button style={{
@@ -439,11 +416,16 @@ export default function Upsell() {
                       fontSize: '12px',
                       cursor: 'pointer'
                     }}>
-                      Add to cart
+                      {buttonText}
                     </button>
                   </InlineStack>
                 </div>
               ))}
+              {showCount > 3 && (
+                <Text variant="bodySm" style={{ color: "#000000", opacity: 0.7, textAlign: 'center' }}>
+                  ... and up to {showCount - 3} more products from this collection
+                </Text>
+              )}
             </BlockStack>
           </BlockStack>
         </Box>
@@ -485,10 +467,10 @@ export default function Upsell() {
               • You can create only one checkout upsell per store
             </Text>
             <Text variant="bodyMd">
-              • Maximum 10 products allowed (currently selected: {selectedProducts.length}/10)
+              • Select a collection to show up to {showCount} products during checkout
             </Text>
             <Text variant="bodyMd">
-              • Products will be displayed automatically during checkout
+              • Products from the collection will be displayed automatically during checkout
             </Text>
           </BlockStack>
         </Banner>
@@ -520,6 +502,17 @@ export default function Upsell() {
                   />
 
                   <TextField
+                    label="Max Products to Show"
+                    value={showCount.toString()}
+                    onChange={(value) => setShowCount(parseInt(value) || 10)}
+                    placeholder="10"
+                    type="number"
+                    helpText="Maximum number of products from the collection to display (1-10)"
+                    min="1"
+                    max="10"
+                  />
+
+                  <TextField
                     label="Custom Properties"
                     value={properties}
                     onChange={setProperties}
@@ -532,64 +525,61 @@ export default function Upsell() {
               </Card>
 
 
-              {/* Product Selection */}
+              {/* Collection Selection */}
               <Card>
                 <BlockStack gap="400">
                   <InlineStack align="space-between">
                     <Text as="h2" variant="headingMd">
-                      Select Upsell Products
+                      Select Collection for Upsells
                     </Text>
-                    <Badge status="info">
-                      {selectedProducts.length} selected
+                    <Badge status={selectedCollection ? "success" : "info"}>
+                      {selectedCollection ? "Selected" : "None selected"}
                     </Badge>
                   </InlineStack>
-                  
+
                   {/* Search */}
                   <TextField
-                    label="Search Products"
+                    label="Search Collections"
                     value={searchQuery}
                     onChange={setSearchQuery}
-                    placeholder="Search by product name or handle..."
+                    placeholder="Search by collection name..."
                     clearButton
                     onClearButtonClick={() => setSearchQuery("")}
                   />
                   
-                  {products.length === 0 ? (
+                  {collections.length === 0 ? (
                     <Box padding="400">
                       <BlockStack gap="200">
                         <Text variant="bodyMd" color="subdued" alignment="center">
-                          No products found.
+                          No collections found.
                         </Text>
                         <Text variant="bodySm" color="subdued" alignment="center">
-                          Please check your store has products available.
+                          Please create collections in your store first.
                         </Text>
                       </BlockStack>
                     </Box>
-                  ) : filteredProducts.length === 0 ? (
+                  ) : filteredCollections.length === 0 ? (
                     <Box padding="400">
                       <Text variant="bodyMd" color="subdued" alignment="center">
-                        No products match your search. Try different keywords.
+                        No collections match your search. Try different keywords.
                       </Text>
                     </Box>
                   ) : (
                     <BlockStack gap="200">
                       <Text variant="bodySm" color="subdued">
-                        Click products below to select them for your upsell block:
+                        Click a collection below to select it for your upsell block:
                       </Text>
                       <ResourceList
-                        resourceName={{ singular: 'product', plural: 'products' }}
-                        items={filteredProducts.slice(0, 20)} // Limit to first 20 for performance
-                        renderItem={(product) => {
-                          const { id, title, priceRangeV2, media, status, handle } = product;
-                          const price = priceRangeV2?.minVariantPrice?.amount || "0.00";
-                          const currency = priceRangeV2?.minVariantPrice?.currencyCode || "USD";
-                          const image = media?.edges?.[0]?.node?.preview?.image?.url || "";
-                          const isSelected = selectedProducts.includes(id);
+                        resourceName={{ singular: 'collection', plural: 'collections' }}
+                        items={filteredCollections.slice(0, 20)}
+                        renderItem={(collection) => {
+                          const { id, title, handle, productsCount, image } = collection;
+                          const isSelected = selectedCollection === id;
 
                           return (
                             <ResourceItem
                               id={id}
-                              onClick={() => handleProductSelection(id)}
+                              onClick={() => handleCollectionSelection(id)}
                               media={
                                 <Avatar
                                   customer={false}
@@ -598,7 +588,7 @@ export default function Upsell() {
                                   source={image}
                                 />
                               }
-                              accessibilityLabel={`Select ${title}`}
+                              accessibilityLabel={`Select ${title} collection`}
                             >
                               <BlockStack gap="100">
                                 <InlineStack align="space-between">
@@ -609,18 +599,13 @@ export default function Upsell() {
                                     <Text variant="bodySm" color="subdued">
                                       Handle: {handle}
                                     </Text>
+                                    <Text variant="bodySm" color="subdued">
+                                      Products: {productsCount}
+                                    </Text>
                                   </BlockStack>
                                   <InlineStack gap="200">
-                                    <Text variant="bodyMd">
-                                      {currency} ${price}
-                                    </Text>
-                                    {status === 'ACTIVE' ? (
-                                      <Badge status="success">Active</Badge>
-                                    ) : (
-                                      <Badge>Draft</Badge>
-                                    )}
                                     {isSelected && (
-                                      <Badge status="info">✓ Selected</Badge>
+                                      <Badge status="success">✓ Selected</Badge>
                                     )}
                                   </InlineStack>
                                 </InlineStack>
@@ -629,9 +614,9 @@ export default function Upsell() {
                           );
                         }}
                       />
-                      {filteredProducts.length > 20 && (
+                      {filteredCollections.length > 20 && (
                         <Text variant="bodySm" color="subdued" alignment="center">
-                          Showing first 20 of {filteredProducts.length} products. Use search to narrow results.
+                          Showing first 20 of {filteredCollections.length} collections. Use search to narrow results.
                         </Text>
                       )}
                     </BlockStack>
@@ -665,7 +650,7 @@ export default function Upsell() {
                         fullWidth
                         onClick={handleCreateUpsell}
                         loading={isLoading}
-                        disabled={isLoading || selectedProducts.length === 0}
+                        disabled={isLoading || !selectedCollection}
                       >
                         {isLoading 
                           ? (editingUpsell ? "Updating..." : "Creating...") 

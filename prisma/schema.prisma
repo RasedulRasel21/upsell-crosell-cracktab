@@ -30,7 +30,8 @@ model UpsellBlock {
   shop            String
   name            String
   placement       String
-  productHandles  String
+  productHandles  String?  // Keep for backward compatibility
+  collectionHandle String? // New field for collection-based upsells
   title           String   @default("Recommended for you")
   showCount       Int      @default(4)
   autoSlide       Boolean  @default(false)
