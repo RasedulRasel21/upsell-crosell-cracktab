@@ -1,14 +1,194 @@
-# Shopify App Template - Remix
+# Upsell & Cross Sell - Cracktab
 
-This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using the [Remix](https://remix.run) framework.
+A Shopify app built with Remix that provides upsell and cross-sell functionality through checkout extensions.
 
-Rather than cloning this repo, you can use your preferred package manager and the Shopify CLI with [these steps](https://shopify.dev/docs/apps/getting-started/create).
+## Project Structure
 
-Visit the [`shopify.dev` documentation](https://shopify.dev/docs/api/shopify-app-remix) for more details on the Remix app package.
+- **Main App**: Remix-based Shopify app for managing upsells
+- **Checkout Extension**: Shopify UI extension that displays upsells in checkout
+- **Database**: SQLite with Prisma ORM
+- **Deployment**: Fly.io for production and staging environments
 
-## Quick start
+## Key Configuration Files
 
-### Prerequisites
+- `shopify.app.toml` - Main Shopify app configuration
+- `shopify.app.staging.toml` - Staging environment configuration
+- `fly.toml` - Production Fly.io deployment config
+- `fly.staging.toml` - Staging Fly.io deployment config
+- `extensions/checkout-upsells/` - Checkout extension source code
+
+## Authentication Setup
+
+The app uses Shopify App Remix framework with OAuth authentication:
+
+- **Auth Handler**: `app/routes/auth.$.jsx` - Handles OAuth callbacks
+- **Server Config**: `app/shopify.server.js` - Core authentication setup
+- **Required Scopes**: `read_products,unauthenticated_write_checkouts`
+
+## Common Issues and Solutions
+
+### 1. Checkout Extension Product Loading Issues
+
+**Problem**: Products not loading in production checkout extension despite successful API connection.
+
+**Symptoms**:
+- Console shows successful API connection
+- Response contains empty product arrays: `{productHandles: Array(0), collectionHandle: null}`
+- Extension displays "No recommendations available"
+
+**Root Cause**: Extension was connecting to staging server first (with empty data) instead of production server (with actual upsell data).
+
+**Solution**:
+Update API URL priority in `extensions/checkout-upsells/src/Checkout.js`:
+
+```javascript
+// BEFORE (incorrect priority)
+const apiUrls = [
+  `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+  `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+];
+
+// AFTER (correct priority)
+const apiUrls = [
+  `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+  `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+];
+```
+
+### 2. Pro Plan Banner Removal
+
+**Problem**: Pro Plan banner persisting after code removal and deployment.
+
+**Solution**: Ensure deployment to both environments:
+1. Remove banner code from `app/routes/app._index.jsx` (lines 278-290)
+2. Deploy to Shopify extension: `npm run deploy:staging`
+3. Deploy to Fly.io server: `flyctl deploy --config fly.toml`
+
+### 3. Shopify App Deployment Errors
+
+**Problem**: "Unsupported section(s) in app configuration: billing, env"
+
+**Solution**: Remove unsupported sections from `shopify.app.toml`:
+```toml
+# Remove these sections if they exist
+[env]  # Not supported
+[billing]  # Not supported
+```
+
+### 4. Product Availability Filtering
+
+**Problem**: Products being filtered out inconsistently between collection and handle methods.
+
+**Solution**: Standardize filtering logic in checkout extension:
+
+```javascript
+// Consistent availability check
+productsData = productsData.filter(product => {
+  if (!product) return false;
+  const variant = product.variants?.edges?.[0]?.node;
+  const isAvailable = variant?.availableForSale;
+  console.log(`🔍 Product ${product.title}: available = ${isAvailable}`);
+  return isAvailable;
+});
+```
+
+## Deployment Process
+
+### Staging Deployment
+```bash
+# Deploy to Shopify
+npm run deploy:staging
+
+# Deploy to Fly.io staging
+flyctl deploy --config fly.staging.toml
+```
+
+### Production Deployment
+```bash
+# Deploy to Shopify
+npm run deploy
+
+# Deploy to Fly.io production
+flyctl deploy --config fly.toml
+```
+
+### Database Operations
+```bash
+# Backup production database
+npm run backup:prod
+
+# Restore database from backup
+npm run backup:restore
+
+# Setup development database
+npm run setup:dev
+```
+
+## Environment Configuration
+
+### Production URLs
+- App: https://upsell-cross-sell-cracktab.fly.dev
+- API: https://upsell-cross-sell-cracktab.fly.dev/api/upsells
+
+### Staging URLs
+- App: https://upsell-cross-sell-booster-st.fly.dev
+- API: https://upsell-cross-sell-booster-st.fly.dev/api/upsells
+
+## Development Scripts
+
+```bash
+# Start development server
+npm run dev
+
+# Start with staging config
+npm run dev:staging
+
+# Build application
+npm run build
+
+# Run linting
+npm run lint
+
+# Database operations
+npm run prisma generate
+npm run prisma migrate dev
+```
+
+## Troubleshooting
+
+### Extension Not Loading
+1. Check console logs in browser dev tools during checkout
+2. Verify API endpoints are accessible
+3. Confirm shop domain is correctly detected
+4. Ensure products have available variants
+
+### API Connection Issues
+1. Verify Fly.io app is running: `flyctl status`
+2. Check app logs: `flyctl logs`
+3. Test API endpoint directly in browser
+4. Confirm correct environment variables
+
+### Database Issues
+1. Check database file exists: `ls -la *.sqlite`
+2. Run migrations: `npx prisma migrate deploy`
+3. Verify schema: `npx prisma studio`
+
+## Key Files to Monitor
+
+- `extensions/checkout-upsells/src/Checkout.js` - Main extension logic
+- `app/routes/api.upsells.tsx` - API endpoint for upsell data
+- `app/routes/app._index.jsx` - Main app dashboard
+- `fly.toml` / `fly.staging.toml` - Deployment configurations
+
+## Support
+
+For issues related to:
+- **Shopify Integration**: Check Shopify Partner Dashboard
+- **Fly.io Deployment**: Use `flyctl` commands for debugging
+- **Database**: Use Prisma Studio for data inspection
+- **Extensions**: Enable browser dev tools during checkout testing
+
+## Prerequisites
 
 Before you begin, you'll need the following:
 
@@ -16,46 +196,11 @@ Before you begin, you'll need the following:
 2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup) if you don't have one.
 3. **Test Store**: Set up either a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or a [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store) for testing your app.
 
-### Setup
+## Local Development
 
-If you used the CLI to create the template, you can skip this section.
-
-Using yarn:
-
-```shell
-yarn install
-```
-
-Using npm:
-
-```shell
+```bash
 npm install
-```
-
-Using pnpm:
-
-```shell
-pnpm install
-```
-
-### Local Development
-
-Using yarn:
-
-```shell
-yarn dev
-```
-
-Using npm:
-
-```shell
 npm run dev
-```
-
-Using pnpm:
-
-```shell
-pnpm run dev
 ```
 
 Press P to open the URL to your app. Once you click install, you can start development.

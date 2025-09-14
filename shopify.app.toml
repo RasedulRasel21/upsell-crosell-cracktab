@@ -6,15 +6,8 @@ handle = "upsell-cross-sell-booster"
 application_url = "https://upsell-cross-sell-cracktab.fly.dev"
 embedded = true
 
-[env]
-PORT = "3000"
-SHOPIFY_APP_URL = "https://upsell-cross-sell-cracktab.fly.dev"
-SHOPIFY_API_KEY = "304952a9812404378c88092ac78264ff"
-SCOPES = "read_products,unauthenticated_write_checkouts"
-
 [build]
 automatically_update_urls_on_dev = false
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-07"
@@ -41,10 +34,3 @@ redirect_urls = [
 [pos]
 embedded = false
 
-[billing]
-required = false
-
-[billing.plans.basic]
-amount = 15
-currency_code = "USD"
-interval = "EVERY_30_DAYS"

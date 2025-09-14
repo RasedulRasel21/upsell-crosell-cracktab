@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useLoaderData, useFetcher } from "@remix-run/react";
+import { redirect } from "@remix-run/node";
 import {
   Page,
   Layout,
@@ -238,9 +239,14 @@ export const action = async ({ request }) => {
 
           console.log("Created upsell block:", upsellBlock);
 
+          // Redirect to app home after creating new upsell (not updating)
+          if (actionType === "create_upsell") {
+            return redirect("/app");
+          }
+
           return {
             success: true,
-            message: `Upsell block "${upsellBlock.name}" created successfully!`,
+            message: `Upsell block "${upsellBlock.name}" updated successfully!`,
             upsellBlock,
           };
         }

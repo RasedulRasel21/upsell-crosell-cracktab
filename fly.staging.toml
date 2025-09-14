@@ -2,7 +2,7 @@
 app = 'upsell-cross-sell-booster-st'
 primary_region = 'iad'
 kill_signal = 'SIGINT'
-kill_timeout = '5s'
+kill_timeout = '10s'
 
 [experimental]
   auto_rollback = true
@@ -12,45 +12,34 @@ kill_timeout = '5s'
 [env]
   NODE_ENV = "production"
   PORT = "3000"
+  SCOPES = 'read_products,unauthenticated_write_checkouts,write_products'
+
+[processes]
+  app = 'node ./dbsetup.js npm run docker-start'
 
 [[mounts]]
   source = 'data'
   destination = '/data'
-  initial_size = '1gb'
+  auto_extend_size_threshold = 80
+  auto_extend_size_increment = '1GB'
+  auto_extend_size_limit = '10GB'
 
-[[services]]
-  protocol = 'tcp'
+[http_service]
   internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
   processes = ['app']
 
-  [[services.ports]]
-    port = 80
-    handlers = ['http']
-    force_https = true
-
-  [[services.ports]]
-    port = 443
-    handlers = ['tls', 'http']
-  [services.concurrency]
-    type = 'connections'
-    hard_limit = 1000
-    soft_limit = 1000
-
-  [[services.tcp_checks]]
-    interval = '15s'
-    timeout = '2s'
-    grace_period = '1s'
-
-  [[services.http_checks]]
-    interval = '10s'
-    timeout = '2s'
-    grace_period = '5s'
-    method = 'GET'
-    path = '/'
-    protocol = 'http'
-    tls_skip_verify = false
+[[http_service.checks]]
+  interval = '30s'
+  timeout = '10s'
+  grace_period = '30s'
+  method = 'GET'
+  path = '/'
 
 [[vm]]
-  memory = '1gb'
+  memory = '2gb'
   cpu_kind = 'shared'
   cpus = 1

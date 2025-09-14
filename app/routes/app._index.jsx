@@ -275,19 +275,6 @@ export default function Dashboard() {
           </Banner>
         )}
 
-        {/* Pro Plan Required Banner - Only show for production stores without subscription */}
-        {upsellBlocks.length > 0 && !isDevelopmentStore && !hasActiveSubscription && (
-          <Banner status="warning">
-            <InlineStack align="space-between" wrap={false}>
-              <Text variant="bodyMd">
-                Pro Plan Required: Upgrade to Pro to use upsells on your live store.
-              </Text>
-              <Link to="/app/billing">
-                <Button size="slim" variant="primary">Upgrade to Pro</Button>
-              </Link>
-            </InlineStack>
-          </Banner>
-        )}
 
         {/* Development Store Info Banner */}
         {isDevelopmentStore && !hasActiveSubscription && upsellBlocks.length > 0 && (

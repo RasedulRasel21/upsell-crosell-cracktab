@@ -336,8 +336,8 @@ export default extension(
         
         // Try multiple possible URLs
         const apiUrls = [
-          `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
           `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+          `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
           `https://consisting-came-extension-alternative.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`,
           `http://localhost:59213/api/upsells?shop=${shopDomain}&placement=checkout`
         ];
@@ -547,7 +547,14 @@ export default extension(
           })
         );
 
-        productsData = productsData.filter(Boolean);
+        // Filter out null/invalid products and unavailable products
+        productsData = productsData.filter(product => {
+          if (!product) return false;
+          const variant = product.variants?.edges?.[0]?.node;
+          const isAvailable = variant?.availableForSale;
+          console.log(`🔍 Product ${product.title}: available = ${isAvailable}`);
+          return isAvailable;
+        });
         }
 
         upsellProducts = productsData;
