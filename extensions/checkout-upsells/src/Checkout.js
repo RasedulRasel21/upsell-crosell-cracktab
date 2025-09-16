@@ -35,8 +35,63 @@ export default extension(
       centerPadding: true,
       buttonText: 'Add',
       title: 'Recommended for you',
-      properties: ''
+      properties: '',
+      upsellBlockId: null
     };
+
+    // Analytics tracking function
+    async function trackAnalytics(product, addedToCart = false, existingAnalyticsId = null) {
+      const variant = product.variants?.edges?.[0]?.node;
+      if (!variant) return null;
+
+      const shopDomain = shop?.myshopifyDomain || shop?.domain;
+      if (!shopDomain) return null;
+
+      const analyticsData = {
+        shop: shopDomain,
+        upsellBlockId: apiSettings.upsellBlockId,
+        productId: product.id,
+        variantId: variant.id,
+        productName: product.title,
+        variantTitle: variant.title !== product.title ? variant.title : null,
+        price: parseFloat(variant.price.amount),
+        placement: 'checkout',
+        addedToCart
+      };
+
+      // If we have an existing analytics ID, this is a conversion update
+      if (existingAnalyticsId && addedToCart) {
+        analyticsData.updateExisting = existingAnalyticsId;
+      }
+
+      // Try multiple analytics endpoints (production first)
+      const analyticsUrls = [
+        `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
+        `https://upsell-cross-sell-booster-st.fly.dev/api/analytics`,
+        `https://consisting-came-extension-alternative.trycloudflare.com/api/analytics`
+      ];
+
+      for (const analyticsUrl of analyticsUrls) {
+        try {
+          const response = await fetch(analyticsUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(analyticsData)
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('📊 Analytics tracked successfully:', analyticsData);
+            return result.id; // Return the analytics record ID
+          }
+        } catch (error) {
+          console.log('❌ Analytics tracking failed for:', analyticsUrl, error.message);
+        }
+      }
+      return null;
+    }
 
     // Create main container
     const mainContainer = root.createComponent(View, {
@@ -197,7 +252,12 @@ export default extension(
           size: 'small',
           loading: isAdding,
           disabled: isAdding,
-          onPress: () => addToCart(product, addButton)
+          onPress: async () => {
+            // Track click analytics immediately
+            const analyticsId = await trackAnalytics(product, false);
+            // Then attempt to add to cart
+            await addToCart(product, addButton, analyticsId);
+          }
         },
         isAdding ? 'Adding...' : apiSettings.buttonText
       );
@@ -209,7 +269,7 @@ export default extension(
     }
     
     // Add to cart function
-    async function addToCart(product, buttonComponent) {
+    async function addToCart(product, buttonComponent, analyticsId = null) {
       const variant = product.variants?.edges?.[0]?.node;
       if (!variant) return;
       
@@ -248,7 +308,13 @@ export default extension(
         if (result.type === 'success') {
           console.log('✅ Successfully added to cart');
           buttonComponent.replaceChildren('✓ Added');
-          
+
+          // Track conversion analytics
+          if (analyticsId) {
+            console.log('📊 Tracking conversion for analytics ID:', analyticsId);
+            await trackAnalytics(product, true, analyticsId);
+          }
+
           // Remove product from display after successful add
           setTimeout(() => {
             renderProducts();
@@ -334,12 +400,11 @@ export default extension(
         const shopDomain = shop?.myshopifyDomain || shop?.domain;
         console.log('🏪 Shop domain detected:', shopDomain);
         
-        // Try multiple possible URLs
+        // Try multiple possible URLs (production first)
         const apiUrls = [
           `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
           `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
-          `https://consisting-came-extension-alternative.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`,
-          `http://localhost:59213/api/upsells?shop=${shopDomain}&placement=checkout`
+          `https://consisting-came-extension-alternative.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`
         ];
         
         // Log available environment info for debugging
@@ -376,6 +441,7 @@ export default extension(
         if (data.title) apiSettings.title = data.title;
         if (data.showCount) apiSettings.showCount = data.showCount;
         if (data.buttonText) apiSettings.buttonText = data.buttonText;
+        if (data.upsellBlockId) apiSettings.upsellBlockId = data.upsellBlockId;
         if (data.properties) {
           apiSettings.properties = data.properties;
           console.log('✅ Properties set in apiSettings:', apiSettings.properties);

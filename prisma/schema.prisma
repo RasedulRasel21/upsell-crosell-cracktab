@@ -49,4 +49,31 @@ model UpsellBlock {
   properties      String   @default("")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  // Relationship to analytics
+  analytics       UpsellAnalytics[]
+}
+
+model UpsellAnalytics {
+  id              String   @id @default(cuid())
+  shop            String
+  upsellBlockId   String
+  productId       String   // Shopify product ID
+  variantId       String   // Shopify variant ID
+  productName     String   // Product title for easy reference
+  variantTitle    String?  // Variant title if different from product
+  price           Float    // Product price at time of click
+  placement       String   // Where the upsell was shown (checkout, cart, etc)
+  customerHash    String?  // Anonymous customer identifier
+  sessionId       String?  // Session identifier
+  addedToCart     Boolean  @default(false) // Whether the click resulted in adding to cart
+  createdAt       DateTime @default(now())
+
+  // Relationship to upsell block
+  upsellBlock     UpsellBlock @relation(fields: [upsellBlockId], references: [id], onDelete: Cascade)
+
+  @@index([shop])
+  @@index([upsellBlockId])
+  @@index([createdAt])
+  @@index([addedToCart])
 }

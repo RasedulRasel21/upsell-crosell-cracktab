@@ -45,6 +45,7 @@ export default function App() {
         ) : (
           <Link to="/app/upsell">Create Upsell</Link>
         )}
+        <Link to="/app/analytics">Analytics</Link>
         <Link to="/app/billing">Billing & Plans</Link>
       </NavMenu>
       <Outlet />

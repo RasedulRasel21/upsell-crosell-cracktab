@@ -71,6 +71,8 @@ export const loader = async ({ request }) => {
       productHandles: finalProductHandles,
       // New collection-based approach
       collectionHandle: upsellBlock.collectionHandle,
+      // Analytics tracking
+      upsellBlockId: upsellBlock.id,
       title: upsellBlock.title,
       showCount: upsellBlock.showCount,
       autoSlide: upsellBlock.autoSlide,

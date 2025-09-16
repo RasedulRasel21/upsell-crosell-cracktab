@@ -64,7 +64,41 @@ const apiUrls = [
 2. Deploy to Shopify extension: `npm run deploy:staging`
 3. Deploy to Fly.io server: `flyctl deploy --config fly.toml`
 
-### 3. Shopify App Deployment Errors
+### 3. Analytics Showing 0 Despite Successful Tracking
+
+**Problem**: Analytics data is being tracked successfully (visible in console logs like "📊 Analytics tracked successfully") but the production analytics dashboard shows 0 for all metrics.
+
+**Symptoms**:
+- Console shows successful analytics tracking
+- Production dashboard displays all zeros for clicks, conversions, and revenue
+- Logs show messages like "📊 Analytics tracked successfully" and "📊 Tracking conversion for analytics ID: xxx"
+
+**Root Cause**: Analytics endpoints were prioritizing staging URLs over production URLs, causing data to be sent to the staging server instead of production.
+
+**Solution**:
+Update analytics URL priority in `extensions/checkout-upsells/src/Checkout.js`:
+
+```javascript
+// BEFORE (incorrect priority - staging first)
+const analyticsUrls = [
+  `https://upsell-cross-sell-booster-st.fly.dev/api/analytics`,
+  `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
+  // ...
+];
+
+// AFTER (correct priority - production first)
+const analyticsUrls = [
+  `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
+  `https://upsell-cross-sell-booster-st.fly.dev/api/analytics`,
+  // ...
+];
+```
+
+**Deployment Required**: After fixing URLs, deploy to both:
+1. Shopify production: `npm run deploy`
+2. Fly.io production: `flyctl deploy`
+
+### 4. Shopify App Deployment Errors
 
 **Problem**: "Unsupported section(s) in app configuration: billing, env"
 
@@ -75,7 +109,7 @@ const apiUrls = [
 [billing]  # Not supported
 ```
 
-### 4. Product Availability Filtering
+### 5. Product Availability Filtering
 
 **Problem**: Products being filtered out inconsistently between collection and handle methods.
 
@@ -180,13 +214,159 @@ npm run prisma migrate dev
 - `app/routes/app._index.jsx` - Main app dashboard
 - `fly.toml` / `fly.staging.toml` - Deployment configurations
 
+## Analytics System
+
+### Overview
+The app now includes comprehensive analytics tracking to monitor upsell performance and customer engagement. The analytics system tracks user interactions with upsells and provides detailed reporting through the dashboard.
+
+### What is CORS?
+**CORS (Cross-Origin Resource Sharing)** is a security mechanism that controls which websites can access your API from the browser. When Shopify checkout extensions try to send analytics data to your app, browsers enforce CORS policy to prevent malicious websites from making unauthorized requests.
+
+**Why was CORS needed?**
+- Shopify checkout extensions run from `https://extensions.shopifycdn.com`
+- Our analytics API runs from `https://upsell-cross-sell-booster-st.fly.dev`
+- Without proper CORS headers, the browser blocks these cross-origin requests
+
+**CORS Solution Implemented:**
+```javascript
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Shopify-Topic, X-Shopify-Hmac-Sha256, X-Shopify-Shop-Domain, X-Shopify-API-Version",
+  "Access-Control-Allow-Credentials": "false",
+  "Access-Control-Max-Age": "86400"
+};
+```
+
+### Data Storage Architecture
+**Database:** SQLite with Prisma ORM
+- **Production Database:** SQLite file stored on Fly.io production server (`/data/sqlite.db`)
+- **Staging Database:** SQLite file stored on Fly.io staging server (`/data/staging.sqlite`)
+- **Local Development:** SQLite file in project directory (`dev.sqlite`)
+
+**Analytics Data Model:**
+```sql
+model UpsellAnalytics {
+  id            String   @id @default(cuid())
+  shop          String
+  upsellBlockId String?
+  productId     String
+  variantId     String
+  productName   String
+  variantTitle  String?
+  price         Float
+  placement     String   // "checkout" or "cart"
+  customerHash  String?
+  sessionId     String?
+  addedToCart   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  upsellBlock   UpsellBlock? @relation(fields: [upsellBlockId], references: [id])
+}
+```
+
+### Analytics Functionality
+
+#### 1. Data Collection (`/api/analytics` endpoint)
+- **Tracks Click Events:** When customers click on upsell products
+- **Tracks Conversions:** When customers successfully add upsells to cart
+- **Data Points Collected:**
+  - Shop domain
+  - Product details (ID, name, variant, price)
+  - Placement (checkout/cart)
+  - Customer session information
+  - Conversion status (clicked vs added to cart)
+
+#### 2. Dashboard Analytics (`/app/analytics` page)
+- **Summary Statistics:** Total clicks, conversions, conversion rate, total value
+- **Date Range Filtering:** Today, Yesterday, Last 7/30/90 days, All time
+- **Placement Filtering:** Checkout, Cart, or All placements
+- **Interactive Charts & Graphs:**
+  - Daily Performance Chart (Area chart showing clicks and conversions over last 7 days)
+  - Revenue Trend Chart (Line chart displaying revenue trends)
+  - Placement Breakdown (Pie chart showing distribution between checkout and cart)
+- **Top Products Report:** Most clicked products with performance metrics
+- **Recent Activity:** Detailed log of all customer interactions
+
+#### 3. Double Counting Fix
+**Problem:** Analytics were being tracked twice - once on click and once on successful add to cart
+**Solution:** Modified checkout extension to track analytics only once per interaction:
+
+```javascript
+// Fixed tracking logic
+onPress: async () => {
+  const analyticsId = await trackAnalytics(product, false); // Track click
+  await addToCart(product, addButton, analyticsId); // Update if conversion happens
+}
+```
+
+#### 4. Date Range Enhancements
+Added "Today" and "Yesterday" options with proper timezone handling:
+```javascript
+if (value === "today") {
+  startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+  endDate = new Date();
+  endDate.setHours(23, 59, 59, 999);
+}
+```
+
+### Database Operations
+**No External Database Services Used** - The app uses SQLite files stored locally on each Fly.io server:
+- Simple and reliable for single-instance deployments
+- No additional database hosting costs
+- Automatic backups through Fly.io volume snapshots
+- Database file is mounted to persistent volume at `/data`
+
+### Deployment Architecture
+**Two-Stage Deployment Process:**
+1. **Shopify App Deploy:** Updates app configuration and extension code
+   ```bash
+   npm run deploy:staging  # Updates Shopify Partner Dashboard
+   ```
+
+2. **Fly.io Server Deploy:** Updates server code and API endpoints
+   ```bash
+   flyctl deploy --config fly.staging.toml  # Updates Fly.io application
+   ```
+
+**Why Both Are Needed:**
+- Shopify deployment updates the checkout extension JavaScript code
+- Fly.io deployment updates the server-side analytics API that receives the data
+- Both must be updated to ensure extension and server are compatible
+
+### Technical Implementation Details
+
+#### Key Files for Analytics:
+- `app/routes/api.analytics.jsx` - Analytics API endpoint with CORS support
+- `app/routes/app.analytics.jsx` - Analytics dashboard interface with charts
+- `extensions/checkout-upsells/src/Checkout.js` - Extension tracking logic
+- `prisma/schema.prisma` - Database schema with UpsellAnalytics model
+
+#### Chart Dependencies:
+- **Recharts**: Professional charting library for React applications
+- **Chart Types**: Area charts, Line charts, Pie charts with responsive design
+- **Interactive Features**: Hover tooltips, legends, and responsive sizing
+
+#### Environment Configuration:
+- **Staging:** `https://upsell-cross-sell-booster-st.fly.dev`
+- **Production:** `https://upsell-cross-sell-cracktab.fly.dev`
+- **Database Migration:** Handled automatically via Prisma on deployment
+
+#### Performance Optimizations:
+- Limited analytics queries to 500 records for dashboard performance
+- Indexed database queries by shop and createdAt
+- Efficient data aggregation using Prisma groupBy and aggregate functions
+
 ## Support
 
 For issues related to:
 - **Shopify Integration**: Check Shopify Partner Dashboard
 - **Fly.io Deployment**: Use `flyctl` commands for debugging
-- **Database**: Use Prisma Studio for data inspection
+- **Database**: Use Prisma Studio for data inspection (`npx prisma studio`)
 - **Extensions**: Enable browser dev tools during checkout testing
+- **Analytics**: Check `/api/analytics` endpoint directly for data validation
+- **CORS Issues**: Verify headers in browser dev tools Network tab
 
 ## Prerequisites
 
