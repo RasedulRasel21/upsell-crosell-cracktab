@@ -142,8 +142,8 @@ npm run setup:dev
 ## Environment Configuration
 
 ### Production URLs
-- App: https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app
-- API: https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app/api/upsells
+- App: https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app
+- API: https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/api/upsells
 
 See `DEPLOYMENT.md` for complete deployment instructions.
 
@@ -328,7 +328,7 @@ if (value === "today") {
 - **Interactive Features**: Hover tooltips, legends, and responsive sizing
 
 #### Environment Configuration:
-- **Production:** `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app`
+- **Production:** `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app`
 - **Database Migration:** Handled automatically via Prisma on deployment
 - **Environment Variables:** Configured in DigitalOcean App Platform settings
 

@@ -56,7 +56,7 @@ Value: [Get from Shopify Partners Dashboard]
 #### Variable 4: SHOPIFY_APP_URL
 ```
 Key: SHOPIFY_APP_URL
-Value: https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app
+Value: https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app
 ```
 ✅ Your DigitalOcean app URL (shown at top of app page)
 ⚠️ **Important:** No trailing slash!
@@ -132,7 +132,7 @@ Before clicking Save, verify:
 - [ ] `DATABASE_URL` = `file:/data/prod.sqlite`
 - [ ] `SHOPIFY_API_KEY` = `304952a9812404378c88092ac78264ff`
 - [ ] `SHOPIFY_API_SECRET` = (your secret from Partners Dashboard)
-- [ ] `SHOPIFY_APP_URL` = `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app`
+- [ ] `SHOPIFY_APP_URL` = `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app`
 - [ ] `SCOPES` = `write_products,read_customer_events,read_orders`
 - [ ] `SHOPIFY_UPSELL_BLOCK_ID` = `52229d14-8a57-481c-b8da-3d8df7ec0d71`
 - [ ] `SHOPIFY_CHECKOUT_UPSELLS_ID` = `fb871067-9c1a-44b1-81fe-5d8fe1b96825`
@@ -142,8 +142,8 @@ Before clicking Save, verify:
 ## Next Steps After Successful Deployment
 
 1. **Update Shopify App URLs** in Partners Dashboard:
-   - App URL: `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app`
-   - Redirect URLs: `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app/auth/callback`
+   - App URL: `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app`
+   - Redirect URLs: `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/auth/callback`
 
 2. **Test the app:**
    - Install on a test store

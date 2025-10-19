@@ -66,7 +66,7 @@ export default extension(
 
       // Use DigitalOcean production URL
       const analyticsUrls = [
-        `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app/api/analytics`
+        `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/api/analytics`
       ];
 
       for (const analyticsUrl of analyticsUrls) {
@@ -400,7 +400,7 @@ export default extension(
         
         // Use DigitalOcean production URL
         const apiUrls = [
-          `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app/api/upsells?shop=${shopDomain}&placement=checkout`
+          `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/api/upsells?shop=${shopDomain}&placement=checkout`
         ];
         
         // Log available environment info for debugging
