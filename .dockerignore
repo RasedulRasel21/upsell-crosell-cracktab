@@ -1,3 +1,31 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
 .cache
 build
-node_modules
+dist
+
+# Development files
+*.sqlite
+*.sqlite-journal
+.env.local
+.env.staging
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Shopify CLI
+.shopify
