@@ -19,7 +19,7 @@ export default function Billing() {
 
   const handleViewPlans = () => {
     const storeHandle = shop?.replace('.myshopify.com', '') || '';
-    const appHandle = 'upsell-cross-sell-booster-staging';
+    const appHandle = 'upsell-cross-sell-booster';
     const url = `https://admin.shopify.com/store/${storeHandle}/charges/${appHandle}/pricing_plans`;
     window.open(url, '_top');
   };
