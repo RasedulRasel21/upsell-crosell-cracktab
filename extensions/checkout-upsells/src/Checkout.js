@@ -64,10 +64,10 @@ export default extension(
         analyticsData.updateExisting = existingAnalyticsId;
       }
 
-      // Try multiple analytics endpoints (production first)
+      // Try multiple analytics endpoints (staging first for staging deployment)
       const analyticsUrls = [
-        `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
         `https://upsell-cross-sell-booster-st.fly.dev/api/analytics`,
+        `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
         `https://consisting-came-extension-alternative.trycloudflare.com/api/analytics`
       ];
 
@@ -400,10 +400,10 @@ export default extension(
         const shopDomain = shop?.myshopifyDomain || shop?.domain;
         console.log('🏪 Shop domain detected:', shopDomain);
         
-        // Try multiple possible URLs (production first)
+        // Try multiple possible URLs (staging first for staging deployment)
         const apiUrls = [
-          `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
           `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+          `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
           `https://consisting-came-extension-alternative.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`
         ];
         

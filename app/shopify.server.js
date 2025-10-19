@@ -34,8 +34,17 @@ export const login = shopify.login;
 export const registerWebhooks = shopify.registerWebhooks;
 export const sessionStorage = shopify.sessionStorage;
 
-// Define billing plans
-export const BASIC_PLAN = "basic";
+// Define billing plans with proper Shopify configuration
+export const MONTHLY_PLAN = {
+  name: "Upsell & Cross-Sell Pro",
+  price: 15.00,
+  currencyCode: "USD",
+  interval: "EVERY_30_DAYS",
+  trialDays: 7,
+};
+
+// Legacy export for backward compatibility
+export const BASIC_PLAN = MONTHLY_PLAN;
 
 // Plan configurations
 export const PLANS = {
@@ -45,12 +54,11 @@ export const PLANS = {
     upsellLimit: 1, // One checkout upsell only
     features: [
       "One checkout upsell",
-      "Up to 10 products per upsell", 
+      "Up to 10 products per upsell",
       "Automatic checkout integration",
       "Priority support",
-      "Free for development stores"
+      "7-day free trial"
     ],
-    // Free for dev stores, paid for production stores
-    isFreeForDevelopment: true
+    trialDays: 7
   }
 };

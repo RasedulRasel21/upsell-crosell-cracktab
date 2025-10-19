@@ -24,56 +24,30 @@ import {
   ViewIcon,
 } from "@shopify/polaris-icons";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
-import { authenticate, BASIC_PLAN } from "../shopify.server";
+import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
+  console.log("🏠 INDEX PAGE - Loader started");
   try {
+    console.log("🏠 INDEX PAGE - Authenticating...");
     const { admin, billing, session } = await authenticate.admin(request);
+    console.log("🏠 INDEX PAGE - Authentication successful for shop:", session.shop);
     
-    // Check subscription status and store type
+    // Check subscription status using simple approach
     let hasActiveSubscription = false;
     let isDevelopmentStore = false;
-    let planType = "Development Store";
 
     try {
-      // First check if this is a development store
-      const shopQuery = await admin.graphql(`
-        query {
-          shop {
-            plan {
-              displayName
-            }
-          }
-        }
-      `);
-      const shopData = await shopQuery.json();
-      const planName = shopData?.data?.shop?.plan?.displayName?.toLowerCase();
+      // Simple billing check like the billing page
+      const { appSubscriptions } = await billing.check();
+      const subscription = appSubscriptions?.[0];
 
-      // Development stores have "Shopify Partner" or similar plan names
-      isDevelopmentStore = planName?.includes('partner') || planName?.includes('development');
+      hasActiveSubscription = subscription && subscription.name === 'Pro';
 
-      // Always check billing status, regardless of store type
-      const billingCheck = await billing.check({
-        plans: [BASIC_PLAN],
-        isTest: isDevelopmentStore // Use test billing for dev stores, real for production
-      });
-      hasActiveSubscription = billingCheck.hasActivePayment;
-
-      // Set plan type based on subscription status
-      if (hasActiveSubscription) {
-        planType = "Pro Plan";
-      } else if (isDevelopmentStore) {
-        planType = "Development Store";
-      } else {
-        planType = "Free";
-      }
-
-      console.log("Billing status:", { isDevelopmentStore, hasActiveSubscription, planName, planType });
+      console.log("🏠 INDEX PAGE - Subscription check:", { subscription, hasActiveSubscription });
     } catch (billingError) {
-      console.log("Billing check failed:", billingError);
+      console.error("💥 INDEX PAGE - Billing check failed:", billingError);
       hasActiveSubscription = false;
-      // Fallback: treat as development store if billing check fails
-      isDevelopmentStore = true;
     }
     
     // Fetch existing upsell blocks for this shop
@@ -117,7 +91,6 @@ export const loader = async ({ request }) => {
         upsellBlocks: upsellBlocksWithCollections,
         hasActiveSubscription,
         isDevelopmentStore,
-        planType,
         shop: session.shop,
       };
     } catch (error) {
@@ -126,7 +99,6 @@ export const loader = async ({ request }) => {
         upsellBlocks: [],
         hasActiveSubscription,
         isDevelopmentStore,
-        planType,
         shop: session.shop,
       };
     }
@@ -137,7 +109,6 @@ export const loader = async ({ request }) => {
       upsellBlocks: [],
       hasActiveSubscription: false,
       isDevelopmentStore: true,
-      planType: "Development Store",
       shop: null,
       error: error.message
     };
@@ -196,7 +167,7 @@ export default function Dashboard() {
   
   const [deleteModal, setDeleteModal] = useState({ open: false, upsell: null });
   
-  const { upsellBlocks = [], hasActiveSubscription = false, isDevelopmentStore = false, planType = "Development Store", error } = loaderData;
+  const { upsellBlocks = [], hasActiveSubscription = false, isDevelopmentStore = false, error } = loaderData;
   
   // Handle success/error messages
   useEffect(() => {
@@ -399,8 +370,8 @@ export default function Dashboard() {
                   <BlockStack gap="300">
                     <InlineStack align="space-between">
                       <Text variant="bodyMd">Plan Status:</Text>
-                      <Badge status={hasActiveSubscription ? "success" : (isDevelopmentStore ? "info" : "attention")}>
-                        {planType}
+                      <Badge status={hasActiveSubscription ? "success" : "attention"}>
+                        {hasActiveSubscription ? "Pro Plan Active" : "Free Plan"}
                       </Badge>
                     </InlineStack>
                     
@@ -446,20 +417,6 @@ export default function Dashboard() {
                           Edit Your Checkout Upsell
                         </Button>
                       </Link>
-                    )}
-                    
-                    {!isDevelopmentStore && (
-                      <Link to="/app/billing">
-                        <Button fullWidth outline>
-                          {hasActiveSubscription ? "Manage Billing" : "Upgrade to Pro"}
-                        </Button>
-                      </Link>
-                    )}
-
-                    {isDevelopmentStore && (
-                      <Button fullWidth outline disabled>
-                        Free for Development Stores
-                      </Button>
                     )}
                   </BlockStack>
                 </BlockStack>
