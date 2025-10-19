@@ -1,5 +1,16 @@
 # DigitalOcean Deployment Guide
 
+## Quick Start Checklist
+
+Before deploying, ensure you have:
+
+- [ ] DigitalOcean account created
+- [ ] GitHub/GitLab repository with latest code
+- [ ] Shopify API Key from Partners Dashboard
+- [ ] Shopify API Secret from Partners Dashboard
+- [ ] Extension IDs from Shopify Partners Dashboard
+- [ ] Planned app URL (from DigitalOcean after creation)
+
 ## Prerequisites
 
 1. DigitalOcean account
@@ -8,25 +19,31 @@
 
 ## Required Environment Variables
 
-Configure these in your DigitalOcean App Platform settings:
+⚠️ **CRITICAL**: All these variables MUST be set in DigitalOcean before deployment, or the app will crash with "empty appUrl configuration" error.
 
-### Essential Variables
+Configure these in your DigitalOcean App Platform settings (Settings → Environment Variables):
+
+### Essential Variables (REQUIRED)
 
 ```bash
 # Database - Use persistent volume path
 DATABASE_URL=file:/data/prod.sqlite
 
-# Shopify API Credentials (from Partners Dashboard)
+# Shopify API Credentials (from Partners Dashboard → Apps → [Your App] → Configuration)
+# ⚠️ REQUIRED - App will crash without these
 SHOPIFY_API_KEY=your_api_key_here
 SHOPIFY_API_SECRET=your_api_secret_here
 
-# App URL (will be provided by DigitalOcean)
+# App URL (use your DigitalOcean app URL)
+# ⚠️ REQUIRED - Must match the URL where your app is deployed
+# Format: https://your-app-name.ondigitalocean.app (NO trailing slash)
 SHOPIFY_APP_URL=https://your-app-name.ondigitalocean.app
 
-# Shopify Scopes
+# Shopify Scopes (comma-separated, no spaces)
+# ⚠️ REQUIRED
 SCOPES=write_products,read_customer_events,read_orders
 
-# Extension IDs (from Shopify Partners Dashboard)
+# Extension IDs (from Shopify Partners Dashboard → Extensions)
 SHOPIFY_UPSELL_BLOCK_ID=your_upsell_block_extension_id
 SHOPIFY_CHECKOUT_UPSELLS_ID=your_checkout_upsells_extension_id
 
@@ -99,18 +116,40 @@ Check deployment logs to ensure:
 
 ## Troubleshooting
 
+### Error: "Detected an empty appUrl configuration"
+
+**Symptoms**:
+```
+Error: Detected an empty appUrl configuration, please make sure to set the necessary environment variables.
+```
+
+**Cause**: Missing `SHOPIFY_APP_URL` environment variable
+
+**Solution**:
+1. Go to DigitalOcean App → Settings → Environment Variables
+2. Add `SHOPIFY_APP_URL` with your app's URL (e.g., `https://your-app-name.ondigitalocean.app`)
+3. **Important**: Do NOT include trailing slash
+4. Redeploy the app
+
 ### Container Exits with Non-Zero Code
 
 **Symptoms**: Build succeeds but app crashes on startup
 
 **Common Causes**:
-1. Missing `DATABASE_URL` environment variable
-2. Database path not writable (missing volume mount)
-3. Missing Shopify credentials
-4. Prisma migration failures
+1. Missing required environment variables (see list above)
+2. Missing `DATABASE_URL` environment variable
+3. Database path not writable (missing volume mount)
+4. Missing Shopify credentials (`SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`)
+5. Prisma migration failures
 
 **Solutions**:
-- Check environment variables are set correctly
+- **FIRST**: Verify ALL required environment variables are set:
+  - `SHOPIFY_API_KEY`
+  - `SHOPIFY_API_SECRET`
+  - `SHOPIFY_APP_URL`
+  - `SCOPES`
+  - `DATABASE_URL`
+- Check environment variables are set correctly (no extra spaces, quotes)
 - Verify `/data` volume is mounted
 - Review deployment logs for specific errors
 - Ensure database migrations are included in repo
