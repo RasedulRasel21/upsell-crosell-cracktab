@@ -222,16 +222,18 @@ cd /data
 tar -czf backup-$(date +%Y%m%d).tar.gz prod.sqlite
 ```
 
-## Migration from Fly.io
+## Migration from Other Platforms
 
-1. Export Fly.io database
-2. Import to DigitalOcean volume
-3. Update environment variables
+If migrating from another hosting provider:
+
+1. Export your existing database
+2. Import to DigitalOcean volume (via SSH or SFTP)
+3. Configure environment variables in DigitalOcean
 4. Deploy to DigitalOcean
-5. Update Shopify app URLs
+5. Update Shopify app URLs in Partners Dashboard
 6. Test thoroughly
-7. Switch DNS/domains if needed
-8. Shut down Fly.io app
+7. Update DNS/domains if needed
+8. Shut down old hosting
 
 ## Support
 
