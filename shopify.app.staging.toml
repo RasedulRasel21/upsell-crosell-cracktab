@@ -4,7 +4,7 @@
 client_id = "6b9e2a7c98e68418ac8f3effc79113b2"
 name = "Upsell Booster - Staging"
 handle = "upsell-cross-sell-booster-staging"
-application_url = "https://upsell-cross-sell-booster-st.fly.dev"
+application_url = "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app"
 embedded = true
 
 [build]
@@ -26,9 +26,9 @@ scopes = "read_orders,read_products,unauthenticated_write_checkouts"
 
 [auth]
 redirect_urls = [
-  "https://upsell-cross-sell-booster-st.fly.dev/auth/callback",
-  "https://upsell-cross-sell-booster-st.fly.dev/auth/shopify/callback",
-  "https://upsell-cross-sell-booster-st.fly.dev/api/auth/callback"
+  "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/auth/callback",
+  "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/auth/shopify/callback",
+  "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/api/auth/callback"
 ]
 
 [pos]

@@ -3,7 +3,7 @@
 client_id = "304952a9812404378c88092ac78264ff"
 name = "Upsell Cross Sell Booster"
 handle = "upsell-cross-sell-booster"
-application_url = "https://upsell-cross-sell-cracktab.fly.dev"
+application_url = "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app"
 embedded = true
 
 [build]
@@ -26,9 +26,9 @@ scopes = "read_products,unauthenticated_write_checkouts"
 
 [auth]
 redirect_urls = [
-  "https://upsell-cross-sell-cracktab.fly.dev/auth/callback",
-  "https://upsell-cross-sell-cracktab.fly.dev/auth/shopify/callback",
-  "https://upsell-cross-sell-cracktab.fly.dev/api/auth/callback"
+  "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/auth/callback",
+  "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/auth/shopify/callback",
+  "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/api/auth/callback"
 ]
 
 [pos]
