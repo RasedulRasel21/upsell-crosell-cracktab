@@ -64,11 +64,9 @@ export default extension(
         analyticsData.updateExisting = existingAnalyticsId;
       }
 
-      // Try multiple analytics endpoints (staging first for staging deployment)
+      // Use DigitalOcean production URL
       const analyticsUrls = [
-        `https://upsell-cross-sell-booster-st.fly.dev/api/analytics`,
-        `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
-        `https://consisting-came-extension-alternative.trycloudflare.com/api/analytics`
+        `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app/api/analytics`
       ];
 
       for (const analyticsUrl of analyticsUrls) {
@@ -400,11 +398,9 @@ export default extension(
         const shopDomain = shop?.myshopifyDomain || shop?.domain;
         console.log('🏪 Shop domain detected:', shopDomain);
         
-        // Try multiple possible URLs (staging first for staging deployment)
+        // Use DigitalOcean production URL
         const apiUrls = [
-          `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
-          `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
-          `https://consisting-came-extension-alternative.trycloudflare.com/api/upsells?shop=${shopDomain}&placement=checkout`
+          `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app/api/upsells?shop=${shopDomain}&placement=checkout`
         ];
         
         // Log available environment info for debugging

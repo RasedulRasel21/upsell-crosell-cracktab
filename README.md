@@ -7,15 +7,14 @@ A Shopify app built with Remix that provides upsell and cross-sell functionality
 - **Main App**: Remix-based Shopify app for managing upsells
 - **Checkout Extension**: Shopify UI extension that displays upsells in checkout
 - **Database**: SQLite with Prisma ORM
-- **Deployment**: Fly.io for production and staging environments
+- **Deployment**: DigitalOcean App Platform
 
 ## Key Configuration Files
 
 - `shopify.app.toml` - Main Shopify app configuration
-- `shopify.app.staging.toml` - Staging environment configuration
-- `fly.toml` - Production Fly.io deployment config
-- `fly.staging.toml` - Staging Fly.io deployment config
+- `Dockerfile` - Production deployment configuration
 - `extensions/checkout-upsells/` - Checkout extension source code
+- `DEPLOYMENT.md` - Detailed deployment guide for DigitalOcean
 
 ## Authentication Setup
 
@@ -36,22 +35,14 @@ The app uses Shopify App Remix framework with OAuth authentication:
 - Response contains empty product arrays: `{productHandles: Array(0), collectionHandle: null}`
 - Extension displays "No recommendations available"
 
-**Root Cause**: Extension was connecting to staging server first (with empty data) instead of production server (with actual upsell data).
+**Root Cause**: Extension connecting to wrong server or empty database.
 
 **Solution**:
-Update API URL priority in `extensions/checkout-upsells/src/Checkout.js`:
+Ensure the checkout extension is pointing to your production DigitalOcean URL in `extensions/checkout-upsells/src/Checkout.js`:
 
 ```javascript
-// BEFORE (incorrect priority)
 const apiUrls = [
-  `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
-  `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
-];
-
-// AFTER (correct priority)
-const apiUrls = [
-  `https://upsell-cross-sell-cracktab.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
-  `https://upsell-cross-sell-booster-st.fly.dev/api/upsells?shop=${shopDomain}&placement=checkout`,
+  `https://your-app-name.ondigitalocean.app/api/upsells?shop=${shopDomain}&placement=checkout`
 ];
 ```
 
@@ -59,10 +50,10 @@ const apiUrls = [
 
 **Problem**: Pro Plan banner persisting after code removal and deployment.
 
-**Solution**: Ensure deployment to both environments:
-1. Remove banner code from `app/routes/app._index.jsx` (lines 278-290)
-2. Deploy to Shopify extension: `npm run deploy:staging`
-3. Deploy to Fly.io server: `flyctl deploy --config fly.toml`
+**Solution**: Ensure deployment:
+1. Remove banner code from `app/routes/app._index.jsx`
+2. Deploy to Shopify extension: `npm run deploy`
+3. Commit changes and push to trigger DigitalOcean auto-deploy
 
 ### 3. Analytics Showing 0 Despite Successful Tracking
 
@@ -73,30 +64,20 @@ const apiUrls = [
 - Production dashboard displays all zeros for clicks, conversions, and revenue
 - Logs show messages like "📊 Analytics tracked successfully" and "📊 Tracking conversion for analytics ID: xxx"
 
-**Root Cause**: Analytics endpoints were prioritizing staging URLs over production URLs, causing data to be sent to the staging server instead of production.
+**Root Cause**: Analytics endpoints pointing to wrong server or database.
 
 **Solution**:
-Update analytics URL priority in `extensions/checkout-upsells/src/Checkout.js`:
+Update analytics URL in `extensions/checkout-upsells/src/Checkout.js`:
 
 ```javascript
-// BEFORE (incorrect priority - staging first)
 const analyticsUrls = [
-  `https://upsell-cross-sell-booster-st.fly.dev/api/analytics`,
-  `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
-  // ...
-];
-
-// AFTER (correct priority - production first)
-const analyticsUrls = [
-  `https://upsell-cross-sell-cracktab.fly.dev/api/analytics`,
-  `https://upsell-cross-sell-booster-st.fly.dev/api/analytics`,
-  // ...
+  `https://your-app-name.ondigitalocean.app/api/analytics`
 ];
 ```
 
-**Deployment Required**: After fixing URLs, deploy to both:
-1. Shopify production: `npm run deploy`
-2. Fly.io production: `flyctl deploy`
+**Deployment Required**: After fixing URLs, deploy:
+1. Deploy Shopify extension: `npm run deploy`
+2. Commit and push changes to trigger DigitalOcean deployment
 
 ### 4. Shopify App Deployment Errors
 
@@ -161,12 +142,10 @@ npm run setup:dev
 ## Environment Configuration
 
 ### Production URLs
-- App: https://upsell-cross-sell-cracktab.fly.dev
-- API: https://upsell-cross-sell-cracktab.fly.dev/api/upsells
+- App: https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app
+- API: https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app/api/upsells
 
-### Staging URLs
-- App: https://upsell-cross-sell-booster-st.fly.dev
-- API: https://upsell-cross-sell-booster-st.fly.dev/api/upsells
+See `DEPLOYMENT.md` for complete deployment instructions.
 
 ## Development Scripts
 
@@ -197,10 +176,10 @@ npm run prisma migrate dev
 4. Ensure products have available variants
 
 ### API Connection Issues
-1. Verify Fly.io app is running: `flyctl status`
-2. Check app logs: `flyctl logs`
+1. Check DigitalOcean app runtime logs
+2. Verify all environment variables are set correctly
 3. Test API endpoint directly in browser
-4. Confirm correct environment variables
+4. Ensure DATABASE_URL is configured
 
 ### Database Issues
 1. Check database file exists: `ls -la *.sqlite`
@@ -212,7 +191,8 @@ npm run prisma migrate dev
 - `extensions/checkout-upsells/src/Checkout.js` - Main extension logic
 - `app/routes/api.upsells.tsx` - API endpoint for upsell data
 - `app/routes/app._index.jsx` - Main app dashboard
-- `fly.toml` / `fly.staging.toml` - Deployment configurations
+- `Dockerfile` - Production deployment configuration
+- `DEPLOYMENT.md` - Deployment guide
 
 ## Analytics System
 
@@ -224,7 +204,7 @@ The app now includes comprehensive analytics tracking to monitor upsell performa
 
 **Why was CORS needed?**
 - Shopify checkout extensions run from `https://extensions.shopifycdn.com`
-- Our analytics API runs from `https://upsell-cross-sell-booster-st.fly.dev`
+- Our analytics API runs from your DigitalOcean app URL
 - Without proper CORS headers, the browser blocks these cross-origin requests
 
 **CORS Solution Implemented:**
@@ -322,17 +302,16 @@ if (value === "today") {
 **Two-Stage Deployment Process:**
 1. **Shopify App Deploy:** Updates app configuration and extension code
    ```bash
-   npm run deploy:staging  # Updates Shopify Partner Dashboard
+   npm run deploy  # Updates Shopify Partner Dashboard
    ```
 
-2. **Fly.io Server Deploy:** Updates server code and API endpoints
-   ```bash
-   flyctl deploy --config fly.staging.toml  # Updates Fly.io application
-   ```
+2. **DigitalOcean Server Deploy:** Automatic deployment on git push
+   - Commit and push changes to trigger deployment
+   - Monitor deployment in DigitalOcean dashboard
 
 **Why Both Are Needed:**
 - Shopify deployment updates the checkout extension JavaScript code
-- Fly.io deployment updates the server-side analytics API that receives the data
+- DigitalOcean deployment updates the server-side analytics API that receives the data
 - Both must be updated to ensure extension and server are compatible
 
 ### Technical Implementation Details
@@ -349,9 +328,9 @@ if (value === "today") {
 - **Interactive Features**: Hover tooltips, legends, and responsive sizing
 
 #### Environment Configuration:
-- **Staging:** `https://upsell-cross-sell-booster-st.fly.dev`
-- **Production:** `https://upsell-cross-sell-cracktab.fly.dev`
+- **Production:** `https://upsell-crosell-cracktab-7zdgt.ondigitalocean.app`
 - **Database Migration:** Handled automatically via Prisma on deployment
+- **Environment Variables:** Configured in DigitalOcean App Platform settings
 
 #### Performance Optimizations:
 - Limited analytics queries to 500 records for dashboard performance
@@ -362,11 +341,12 @@ if (value === "today") {
 
 For issues related to:
 - **Shopify Integration**: Check Shopify Partner Dashboard
-- **Fly.io Deployment**: Use `flyctl` commands for debugging
+- **DigitalOcean Deployment**: Check runtime logs in DigitalOcean dashboard
 - **Database**: Use Prisma Studio for data inspection (`npx prisma studio`)
 - **Extensions**: Enable browser dev tools during checkout testing
 - **Analytics**: Check `/api/analytics` endpoint directly for data validation
 - **CORS Issues**: Verify headers in browser dev tools Network tab
+- **Deployment Guide**: See `DEPLOYMENT.md` for detailed instructions
 
 ## Prerequisites
 
@@ -468,7 +448,7 @@ pnpm run build
 
 ## Hosting
 
-When you're ready to set up your app in production, you can follow [our deployment documentation](https://shopify.dev/docs/apps/deployment/web) to host your app on a cloud provider like [Heroku](https://www.heroku.com/) or [Fly.io](https://fly.io/).
+When you're ready to set up your app in production, see the `DEPLOYMENT.md` guide for deploying to DigitalOcean App Platform.
 
 When you reach the step for [setting up environment variables](https://shopify.dev/docs/apps/deployment/web#set-env-vars), you also need to set the variable `NODE_ENV=production`.
 
