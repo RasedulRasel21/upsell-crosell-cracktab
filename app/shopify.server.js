@@ -48,17 +48,62 @@ export const BASIC_PLAN = MONTHLY_PLAN;
 
 // Plan configurations
 export const PLANS = {
+  FREE: {
+    name: "Free",
+    price: 0,
+    checkoutUpsellsAllowed: false, // Checkout upsells NOT allowed
+    productUpsellsAllowed: true,   // Product page upsells allowed
+    upsellLimit: null,              // Unlimited product page upsells
+    features: [
+      "Unlimited product page upsells",
+      "Up to 10 products per upsell",
+      "Customizable styling",
+      "Basic analytics",
+      "Community support"
+    ]
+  },
   PRO: {
     name: "Pro",
     price: 15,
-    upsellLimit: 1, // One checkout upsell only
+    checkoutUpsellsAllowed: true,  // Checkout upsells allowed
+    productUpsellsAllowed: true,   // Product page upsells also allowed
+    upsellLimit: null,              // Unlimited upsells
     features: [
-      "One checkout upsell",
+      "Everything in Free",
+      "Checkout page upsells",
+      "Unlimited product page upsells",
       "Up to 10 products per upsell",
-      "Automatic checkout integration",
+      "Advanced analytics",
+      "Custom button text",
+      "Custom properties",
       "Priority support",
       "7-day free trial"
     ],
     trialDays: 7
   }
 };
+
+// Helper function to check if a shop has a Pro subscription
+export async function hasActiveSubscription(billing) {
+  try {
+    const { appSubscriptions } = await billing.check();
+    return appSubscriptions && appSubscriptions.length > 0;
+  } catch (error) {
+    console.error("Error checking subscription:", error);
+    return false;
+  }
+}
+
+// Helper function to get current plan
+export async function getCurrentPlan(billing) {
+  try {
+    const { appSubscriptions } = await billing.check();
+    if (appSubscriptions && appSubscriptions.length > 0) {
+      return PLANS.PRO;
+    }
+    return PLANS.FREE;
+  } catch (error) {
+    console.error("Error getting current plan:", error);
+    return PLANS.FREE;
+  }
+}

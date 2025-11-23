@@ -14,7 +14,7 @@ import {
 export default extension(
   'purchase.checkout.block.render',
   async (root, api) => {
-    console.log('🚀 CHECKOUT EXTENSION LOADING!');
+
     
     const { query, shop, cartLines, applyCartLinesChange } = api;
     
@@ -81,11 +81,11 @@ export default extension(
 
           if (response.ok) {
             const result = await response.json();
-            console.log('📊 Analytics tracked successfully:', analyticsData);
+
             return result.id; // Return the analytics record ID
           }
         } catch (error) {
-          console.log('❌ Analytics tracking failed for:', analyticsUrl, error.message);
+
         }
       }
       return null;
@@ -121,12 +121,26 @@ export default extension(
     
     root.appendChild(mainContainer);
 
+    // Helper function to get currency symbol
+    function getCurrencySymbol(currencyCode) {
+      const symbols = {
+        'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'AUD': '$', 'CAD': '$',
+        'CHF': 'CHF', 'CNY': '¥', 'SEK': 'kr', 'NZD': '$', 'MXN': '$',
+        'SGD': '$', 'HKD': '$', 'NOK': 'kr', 'KRW': '₩', 'TRY': '₺',
+        'RUB': '₽', 'INR': '₹', 'BRL': 'R$', 'ZAR': 'R', 'DKK': 'kr',
+        'PLN': 'zł', 'TWD': 'NT$', 'THB': '฿', 'MYR': 'RM'
+      };
+      return symbols[currencyCode] || currencyCode + ' ';
+    }
+
     // Function to create product card
     function createProductCard(product) {
       const variant = product.variants?.edges?.[0]?.node;
       if (!variant) return null;
-      
+
       const isAdding = addingToCart[variant.id] || false;
+      const currencyCode = variant.price.currencyCode;
+      const currencySymbol = getCurrencySymbol(currencyCode);
       const price = parseFloat(variant.price.amount).toFixed(2);
       const compareAtPrice = variant.compareAtPrice ? parseFloat(variant.compareAtPrice.amount).toFixed(2) : null;
       const hasDiscount = compareAtPrice && parseFloat(compareAtPrice) > parseFloat(price);
@@ -209,7 +223,7 @@ export default extension(
             appearance: 'subdued',
             decoration: 'strikethrough'
           },
-          `$${compareAtPrice}`
+          `${currencySymbol}${compareAtPrice}`
         );
         priceInfo.appendChild(oldPrice);
         
@@ -234,7 +248,7 @@ export default extension(
           size: 'medium',
           emphasis: 'bold'
         },
-        `$${price}`
+        `${currencySymbol}${price}`
       );
       priceInfo.appendChild(currentPrice);
       
@@ -277,7 +291,7 @@ export default extension(
       try {
         // Parse custom properties if they exist and convert to array format
         let customAttributes = [];
-        console.log('🔍 Properties available in apiSettings:', apiSettings.properties);
+
 
         if (apiSettings.properties) {
           try {
@@ -287,13 +301,13 @@ export default extension(
               key: key,
               value: String(value)
             }));
-            console.log('✅ Using custom properties:', customAttributes);
+
           } catch (error) {
-            console.warn('⚠️ Invalid properties JSON, skipping:', apiSettings.properties);
-            console.error('JSON Parse Error:', error);
+
+
           }
         } else {
-          console.log('ℹ️ No properties found in apiSettings');
+
         }
 
         const result = await applyCartLinesChange({
@@ -304,12 +318,12 @@ export default extension(
         });
         
         if (result.type === 'success') {
-          console.log('✅ Successfully added to cart');
+
           buttonComponent.replaceChildren('✓ Added');
 
           // Track conversion analytics
           if (analyticsId) {
-            console.log('📊 Tracking conversion for analytics ID:', analyticsId);
+
             await trackAnalytics(product, true, analyticsId);
           }
 
@@ -318,11 +332,11 @@ export default extension(
             renderProducts();
           }, 1000);
         } else {
-          console.error('Failed to add to cart:', result.message);
+
           buttonComponent.replaceChildren('Error');
         }
       } catch (error) {
-        console.error('Error adding to cart:', error);
+
         buttonComponent.replaceChildren('Error');
       } finally {
         addingToCart[variant.id] = false;
@@ -378,7 +392,7 @@ export default extension(
               return !isInCart;
             }
           } catch (error) {
-            console.log('Cart lines not available, showing all products');
+
           }
           return true;
         })
@@ -396,31 +410,24 @@ export default extension(
     async function fetchUpsellProducts() {
       try {
         const shopDomain = shop?.myshopifyDomain || shop?.domain;
-        console.log('🏪 Shop domain detected:', shopDomain);
+
         
         // Use DigitalOcean production URL
         const apiUrls = [
           `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app/api/upsells?shop=${shopDomain}&placement=checkout`
         ];
-        
-        // Log available environment info for debugging
-        console.log('🔍 Extension environment:', {
-          shopDomain,
-          origin: typeof window !== 'undefined' ? window.location?.origin : 'undefined',
-          href: typeof window !== 'undefined' ? window.location?.href : 'undefined'
-        });
-        
+
         let response;
         let lastError;
         
         for (const apiUrl of apiUrls) {
           try {
-            console.log('🔄 Trying to fetch from:', apiUrl);
+
             response = await fetch(apiUrl);
-            console.log('✅ Successfully connected to:', apiUrl);
+
             break;
           } catch (error) {
-            console.log('❌ Failed to connect to:', apiUrl, error.message);
+
             lastError = error;
           }
         }
@@ -430,8 +437,8 @@ export default extension(
         }
         const data = await response.json();
         
-        console.log('📦 Checkout upsell API response:', data);
-        console.log('🔍 Properties from API:', data.properties);
+
+
 
         // Update settings from API
         if (data.title) apiSettings.title = data.title;
@@ -440,7 +447,7 @@ export default extension(
         if (data.upsellBlockId) apiSettings.upsellBlockId = data.upsellBlockId;
         if (data.properties) {
           apiSettings.properties = data.properties;
-          console.log('✅ Properties set in apiSettings:', apiSettings.properties);
+
         }
         if (data.layout) apiSettings.layout = data.layout;
         if (data.backgroundColor) apiSettings.backgroundColor = data.backgroundColor;
@@ -458,7 +465,7 @@ export default extension(
 
         // Check if we have collection handle (new approach)
         if (data.collectionHandle) {
-          console.log('🛍️ Fetching products from collection:', data.collectionHandle);
+
           fetchMethod = 'collection';
 
           // Fetch products from collection using Storefront API
@@ -501,32 +508,32 @@ export default extension(
             );
 
             const collectionData = collectionQuery.data?.collection;
-            console.log('🔍 Collection query result:', collectionQuery);
+
 
             if (collectionData?.products?.edges?.length > 0) {
               productsToFetch = collectionData.products.edges.map(edge => edge.node);
-              console.log(`📊 Found ${productsToFetch.length} products in collection`);
+
             } else {
-              console.log('⚠️ No products found in collection. Reasons could be:');
-              console.log('   1. Collection does not exist');
-              console.log('   2. Collection exists but has no products');
-              console.log('   3. All products in collection are out of stock');
-              console.log('🔄 Falling back to product handles if available...');
+
+
+
+
+
 
               // Try to fall back to product handles if available
               if (data.productHandles && data.productHandles.length > 0) {
-                console.log('✅ Using product handles as fallback:', data.productHandles);
+
                 fetchMethod = 'handles';
                 productsToFetch = data.productHandles.slice(0, 10);
               } else {
-                console.log('❌ No fallback product handles available');
+
                 loading = false;
                 renderProducts();
                 return;
               }
             }
           } catch (error) {
-            console.error('❌ Error fetching collection products:', error);
+
             loading = false;
             renderProducts();
             return;
@@ -534,17 +541,17 @@ export default extension(
         }
         // Fallback to old product handles approach for backward compatibility
         else if (data.productHandles && data.productHandles.length > 0) {
-          console.log('🛍️ Product handles to fetch:', data.productHandles);
+
           fetchMethod = 'handles';
 
           // Limit to maximum 10 products for checkout placement
           const limitedHandles = data.productHandles.slice(0, 10);
-          console.log(`📊 Limited to ${limitedHandles.length} products for checkout`);
+
           productsToFetch = limitedHandles;
         }
         // No products to fetch
         else {
-          console.log('⚠️ No product handles or collection handle returned from API');
+
           loading = false;
           renderProducts();
           return;
@@ -565,7 +572,7 @@ export default extension(
           productsData = await Promise.all(
             productsToFetch.map(async (handle) => {
             try {
-              console.log(`🔍 Querying product: ${handle}`);
+
               
               const productQuery = await query(
                 `query getProduct($handle: String!) {
@@ -600,10 +607,10 @@ export default extension(
                 { variables: { handle } }
               );
               
-              console.log(`✅ Product query result for ${handle}:`, productQuery);
+
               return productQuery?.data?.product;
             } catch (error) {
-              console.error(`❌ Error querying product ${handle}:`, error);
+
               return null;
             }
           })
@@ -614,17 +621,17 @@ export default extension(
           if (!product) return false;
           const variant = product.variants?.edges?.[0]?.node;
           const isAvailable = variant?.availableForSale;
-          console.log(`🔍 Product ${product.title}: available = ${isAvailable}`);
+
           return isAvailable;
         });
         }
 
         upsellProducts = productsData;
-        console.log(`🎯 Final valid products (${upsellProducts.length}):`, upsellProducts.map(p => p.title));
+
         
       } catch (error) {
-        console.error('❌ Failed to fetch checkout upsell products:', error);
-        console.log('🚨 API connection failed - no products will be shown');
+
+
         upsellProducts = [];
       } finally {
         loading = false;
@@ -640,6 +647,6 @@ export default extension(
       cartLines.subscribe(renderProducts);
     }
     
-    console.log('✅ Extension rendered successfully');
+
   }
 );

@@ -1,0 +1,555 @@
+{%- comment -%}
+----------------------------------------------------------------------------------------------------------------------
+PRODUCT BUNDLE
+----------------------------------------------------------------------------------------------------------------------
+
+This snippet renders a product bundle block with checkboxes and dynamic pricing
+
+********************************************
+Supported variables
+********************************************
+
+* block: the block settings
+* product: the current product
+{%- endcomment -%}
+
+{%- liquid
+  assign collection_handle = block.settings.collection.handle
+  assign discount_percentage = block.settings.discount_percentage
+  assign discount_code = block.settings.discount_code
+-%}
+
+{%- if collection_handle != blank -%}
+  <style>
+    .product-bundle {
+      border: 1px solid #cfcfcf;
+      padding: 20px;
+      margin: 20px 0;
+    }
+
+    .product-bundle__title {
+      font-size: 18px;
+      font-weight: 700;
+      text-align: left;
+      margin-bottom: 15px;
+      letter-spacing: 1px;
+    }
+
+    .product-bundle__images {
+      display: flex;
+      justify-content: flex-start;
+      gap: 15px;
+      margin-bottom: 20px;
+      min-height: 120px;
+      align-items: center;
+    }
+
+    .product-bundle__image-wrapper {
+      width: 100px;
+      height: 100px;
+      border: 1px solid #e5e5e5;
+      overflow: hidden;
+      display: none;
+      background: #f9f9f9;
+    }
+
+    .product-bundle__image-wrapper.active {
+      display: block;
+    }
+
+    .product-bundle__image-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .product-bundle__prices {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .product-bundle__prices span {
+      margin: 0 5px;
+    }
+
+    .product-bundle__old-price {
+      text-decoration: line-through;
+      color: #666;
+    }
+
+    .product-bundle__new-price {
+      font-weight: 700;
+      color: {{ block.settings.new_price_color }};
+    }
+
+    .product-bundle__promo-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .product-bundle__promo-code {
+      padding: 4px 10px;
+      color: white;
+      background: red;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .product-bundle__promo-code:hover {
+      opacity: 0.9;
+    }
+
+    .product-bundle__copy-message {
+      display: none;
+      color: green;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .product-bundle__copy-message.show {
+      display: inline-block;
+    }
+
+    .product-bundle__items {
+      margin-bottom: 15px;
+    }
+
+    .product-bundle__item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .product-bundle__item:last-child {
+      border-bottom: none;
+    }
+
+    .product-bundle__item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .product-bundle__checkbox {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .product-bundle__item-label {
+      font-weight: 600;
+      font-size: 14px;
+      max-width: 150px;
+      line-height: 16px;
+    }
+
+    .product-bundle__item-prices {
+      text-align: right;
+      font-size: 14px;
+    }
+
+    .product-bundle__item-old-price {
+      display: block;
+      text-decoration: line-through;
+      color: #999;
+      font-size: 12px;
+    }
+
+    .product-bundle__item-new-price {
+      color: {{ block.settings.new_price_color }};
+      font-weight: 700;
+    }
+
+    .product-bundle__button {
+      width: 100%;
+      padding: 15px;
+      background: #000;
+      color: white;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .product-bundle__button:hover {
+      background: #1a252f;
+    }
+
+    .product-bundle__button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    @media screen and (max-width: 767px){
+    .product-bundle__prices {
+        font-size: 16px;
+    }
+    }
+  </style>
+
+  <div class="product-bundle" {{ block.shopify_attributes }}>
+    <div class="product-bundle__title">{{ block.settings.bundle_title }}</div>
+
+    {%- comment -%} Image Preview Area {%- endcomment -%}
+    <div class="product-bundle__images" id="bundle-images-{{ block.id }}">
+      <div class="bundle-loading">Loading products...</div>
+    </div>
+
+    {%- comment -%} Price Display {%- endcomment -%}
+    <div class="product-bundle__prices">
+      <span>WAS:
+        <span class="product-bundle__old-price" id="bundle-old-price-{{ block.id }}">$0.00</span>
+      </span>
+      <span>TODAY:
+        <span class="product-bundle__new-price" id="bundle-new-price-{{ block.id }}">$0.00</span>
+      </span>
+    </div>
+
+    {%- comment -%} Promo Code Banner {%- endcomment -%}
+    {%- if discount_code != blank -%}
+      <div class="product-bundle__promo-wrapper">
+        <span>ENTER CODE</span>
+        <div class="product-bundle__promo-code" id="bundle-promo-code-{{ block.id }}">{{ discount_code }}</div>
+        <span>AT CHECKOUT</span>
+      </div>
+      <div style="text-align: center;">
+        <span class="product-bundle__copy-message" id="bundle-copy-msg-{{ block.id }}">Copied!</span>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} Product Checkboxes {%- endcomment -%}
+    <div class="product-bundle__items" id="bundle-items-{{ block.id }}">
+      <div class="bundle-loading">Loading products...</div>
+    </div>
+
+    {%- comment -%} Add Bundle Button {%- endcomment -%}
+    <button
+      type="button"
+      class="product-bundle__button"
+      id="bundle-add-btn-{{ block.id }}"
+      data-bundle-id="{{ block.id }}"
+    >
+      ADD BUNDLE TO CART
+    </button>
+  </div>
+
+  <script>
+    (function() {
+      const bundleId = '{{ block.id }}';
+      const discountPercentage = {{ discount_percentage }};
+      const collectionHandle = '{{ collection_handle }}';
+      const shopDomain = '{{ shop.permanent_domain }}';
+      const discountCode = '{{ discount_code }}';
+      const shopCurrency = '{{ shop.currency }}';
+
+      // Helper function to get currency symbol
+      function getCurrencySymbol(currencyCode) {
+        const symbols = {
+          'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'AUD': '$', 'CAD': '$',
+          'CHF': 'CHF', 'CNY': '¥', 'SEK': 'kr', 'NZD': '$', 'MXN': '$',
+          'SGD': '$', 'HKD': '$', 'NOK': 'kr', 'KRW': '₩', 'TRY': '₺',
+          'RUB': '₽', 'INR': '₹', 'BRL': 'R$', 'ZAR': 'R', 'DKK': 'kr',
+          'PLN': 'zł', 'TWD': 'NT$', 'THB': '฿', 'MYR': 'RM'
+        };
+        return symbols[currencyCode] || currencyCode + ' ';
+      }
+      const currencySymbol = getCurrencySymbol(shopCurrency);
+
+      // Load products from collection
+      async function loadBundleProducts() {
+        const imagesContainer = document.getElementById(`bundle-images-${bundleId}`);
+        const itemsContainer = document.getElementById(`bundle-items-${bundleId}`);
+
+        if (!collectionHandle) {
+          imagesContainer.innerHTML = '<div style="text-align: center; color: #999;">Please select a collection in theme settings</div>';
+          itemsContainer.innerHTML = '';
+          return;
+        }
+
+        try {
+          // Fetch products from collection
+          const collectionUrl = `https://${shopDomain}/collections/${collectionHandle}/products.json?limit=4`;
+          const response = await fetch(collectionUrl);
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch products');
+          }
+
+          const data = await response.json();
+          const products = data.products || [];
+
+          if (products.length === 0) {
+            imagesContainer.innerHTML = '<div style="text-align: center; color: #999;">No products found in this collection</div>';
+            itemsContainer.innerHTML = '';
+            return;
+          }
+
+          // Render product images
+          imagesContainer.innerHTML = products.map((product, index) => `
+            <div class="product-bundle__image-wrapper active" id="bundle-image-${index + 1}-${bundleId}" data-product-id="${product.id}">
+              ${product.images && product.images[0] ? `<img src="${product.images[0].src}" alt="${product.title}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">` : ''}
+            </div>
+          `).join('');
+
+          // Render product checkboxes
+          itemsContainer.innerHTML = products.map((product, index) => {
+            const price = product.variants[0].price;
+            const discountAmount = price * discountPercentage / 100;
+            const newPrice = price - discountAmount;
+
+            return `
+              <div class="product-bundle__item">
+                <div class="product-bundle__item-left">
+                  <input
+                    type="checkbox"
+                    class="product-bundle__checkbox bundle-checkbox"
+                    id="bundle-product-${index + 1}-${bundleId}"
+                    data-product-id="${product.variants[0].id}"
+                    data-price="${price}"
+                    data-discount="${discountPercentage}"
+                    data-image-id="bundle-image-${index + 1}-${bundleId}"
+                    data-bundle-id="${bundleId}"
+                    checked
+                  >
+                  <label for="bundle-product-${index + 1}-${bundleId}" class="product-bundle__item-label">
+                    ${product.title}
+                  </label>
+                </div>
+                <div class="product-bundle__item-prices">
+                  <span class="product-bundle__item-old-price">${currencySymbol}${parseFloat(price).toFixed(2)}</span>
+                  <span class="product-bundle__item-new-price">
+                    ${currencySymbol}${parseFloat(newPrice).toFixed(2)}
+                    <span style="font-size: 11px; color: #e74c3c;">with code ${discountCode}</span>
+                  </span>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          // Initialize event listeners
+          initializeEventListeners();
+          updateBundlePrices();
+
+        } catch (error) {
+          imagesContainer.innerHTML = '<div style="text-align: center; color: #999;">Error loading products</div>';
+          itemsContainer.innerHTML = '';
+        }
+      }
+
+      // Initialize event listeners for checkboxes
+      function initializeEventListeners() {
+        document.querySelectorAll(`[data-bundle-id="${bundleId}"].bundle-checkbox`).forEach(checkbox => {
+          checkbox.addEventListener('change', function() {
+            toggleImage(this.dataset.imageId, this.checked);
+            updateBundlePrices();
+          });
+        });
+
+        // Setup promo code copy
+        const promoCode = document.getElementById(`bundle-promo-code-${bundleId}`);
+        if (promoCode) {
+          promoCode.addEventListener('click', function() {
+            const code = this.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+              const copyMsg = document.getElementById(`bundle-copy-msg-${bundleId}`);
+              copyMsg.classList.add('show');
+              setTimeout(() => {
+                copyMsg.classList.remove('show');
+              }, 2000);
+            });
+          });
+        }
+      }
+
+      // Update prices based on checkbox state
+      function updateBundlePrices() {
+        const checkboxes = document.querySelectorAll(`[data-bundle-id="${bundleId}"].bundle-checkbox:checked`);
+        let totalOldPrice = 0;
+        let totalNewPrice = 0;
+
+        checkboxes.forEach(checkbox => {
+          const price = parseFloat(checkbox.dataset.price);
+          const discount = parseFloat(checkbox.dataset.discount);
+          totalOldPrice += price;
+          totalNewPrice += price - (price * discount / 100);
+        });
+
+        document.getElementById(`bundle-old-price-${bundleId}`).textContent = `${currencySymbol}${totalOldPrice.toFixed(2)}`;
+        document.getElementById(`bundle-new-price-${bundleId}`).textContent = `${currencySymbol}${totalNewPrice.toFixed(2)}`;
+
+        // Enable/disable button
+        const button = document.getElementById(`bundle-add-btn-${bundleId}`);
+        button.disabled = checkboxes.length === 0;
+      }
+
+      // Toggle image visibility
+      function toggleImage(imageId, show) {
+        const imageWrapper = document.getElementById(imageId);
+        if (imageWrapper) {
+          if (show) {
+            imageWrapper.classList.add('active');
+          } else {
+            imageWrapper.classList.remove('active');
+          }
+        }
+      }
+
+
+      // Add to cart functionality
+      document.getElementById(`bundle-add-btn-${bundleId}`).addEventListener('click', async function() {
+        const checkboxes = document.querySelectorAll(`[data-bundle-id="${bundleId}"].bundle-checkbox:checked`);
+        const items = [];
+
+        checkboxes.forEach(checkbox => {
+          items.push({
+            id: checkbox.dataset.productId,
+            quantity: 1
+          });
+        });
+
+        if (items.length === 0) {
+          alert('Please select at least one product');
+          return;
+        }
+
+        // Disable button during add to cart
+        this.disabled = true;
+        this.textContent = 'ADDING...';
+
+        try {
+          // Add items to cart
+          const response = await fetch('/cart/add.js', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ items: items })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to add to cart');
+          }
+
+          // Click cart button to open drawer
+          const cartBtn = document.querySelector('.cartbtnicon, #cart-icon-bubble, .header__icon--cart');
+          if (cartBtn) {
+            cartBtn.click();
+          }
+
+          // Remove is-empty class
+          const cartDrawer = document.querySelector('.cart-drawer, cart-drawer');
+          if (cartDrawer) {
+            cartDrawer.classList.remove('is-empty');
+          }
+
+          // Hide empty state
+          const emptyDrawer = document.querySelector('.drawer__inner-empty');
+          if (emptyDrawer) {
+            emptyDrawer.style.display = 'none';
+          }
+
+          // Reload cart drawer content from current page
+          setTimeout(() => {
+            fetch(location.href)
+              .then(res => res.text())
+              .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Update cart drawer
+                const newCartDrawer = doc.querySelector('#CartDrawer, cart-drawer, .cart-drawer');
+                const currentCartDrawer = document.querySelector('cart-drawer, .cart-drawer');
+                if (newCartDrawer && currentCartDrawer) {
+                  currentCartDrawer.innerHTML = newCartDrawer.innerHTML;
+                }
+
+                // Update cart icon bubble
+                const newCartIcon = doc.querySelector('#cart-icon-bubble');
+                const currentCartIcon = document.querySelector('#cart-icon-bubble');
+                if (newCartIcon && currentCartIcon) {
+                  currentCartIcon.innerHTML = newCartIcon.innerHTML;
+                }
+              })
+              .catch(err => {});
+          }, 100);
+
+          // Show success message
+          this.textContent = 'ADDED TO CART!';
+          setTimeout(() => {
+            this.textContent = 'ADD BUNDLE TO CART';
+            this.disabled = false;
+          }, 2000);
+
+        } catch (error) {
+          alert('Error adding products to cart. Please try again.');
+          this.textContent = 'ADD BUNDLE TO CART';
+          this.disabled = false;
+        }
+      });
+
+      // Load products when page loads
+      loadBundleProducts();
+    })();
+  </script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Product Bundle",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "bundle_title",
+      "label": "Bundle Title",
+      "default": "FREQUENTLY BOUGHT TOGETHER"
+    },
+    {
+      "type": "header",
+      "content": "Bundle Products"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection",
+      "info": "Select a collection. The first 4 products from this collection will be used in the bundle"
+    },
+    {
+      "type": "header",
+      "content": "Pricing & Discount"
+    },
+    {
+      "type": "range",
+      "id": "discount_percentage",
+      "label": "Discount Percentage",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "default": 10,
+      "unit": "%"
+    },
+    {
+      "type": "text",
+      "id": "discount_code",
+      "label": "Discount Code",
+      "default": "BUNDLE10",
+      "info": "The promo code customers will use at checkout"
+    },
+    {
+      "type": "color",
+      "id": "new_price_color",
+      "label": "Discounted Price Color",
+      "default": "#e74c3c"
+    }
+  ]
+}
+{% endschema %}

@@ -1,20 +1,46 @@
 import { json } from "@remix-run/node";
+import { authenticate } from "../shopify.server";
+import { getCurrentPlan } from "../shopify.server";
 
 export const loader = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const shop = url.searchParams.get("shop");
     const placement = url.searchParams.get("placement") || "checkout";
-    
-    // Only allow checkout placement
-    if (placement !== "checkout") {
-      return json({ error: "Only checkout placement is supported" }, { status: 400 });
-    }
     const callback = url.searchParams.get("callback"); // JSONP support
-    
+
     if (!shop) {
       return json({ error: "Shop parameter is required" }, { status: 400 });
     }
+
+    // Check plan restrictions for checkout upsells
+    if (placement === "checkout") {
+      try {
+        // Authenticate and check billing
+        const { billing, session } = await authenticate.public.checkout(request);
+        const currentPlan = await getCurrentPlan(billing);
+
+        // If FREE plan, deny checkout upsells
+        if (!currentPlan.checkoutUpsellsAllowed) {
+          return json({
+            productHandles: [],
+            collectionHandle: null,
+            title: "",
+            showCount: 0,
+            message: "Upgrade to Pro to use checkout upsells"
+          }, {
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+              "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            },
+          });
+        }
+      } catch (authError) {
+        // Allow upsells if we can't check (backward compatibility)
+      }
+    }
+    // Product page upsells are always allowed (both FREE and PRO)
 
     // Get active upsell blocks for this shop and placement
     const { getActiveUpsellBlock } = await import("../models/upsell.server");
@@ -22,6 +48,7 @@ export const loader = async ({ request }) => {
 
     if (!upsellBlock) {
       return json({
+        products: [],
         productHandles: [],
         collectionHandle: null,
         title: "Recommended for you",
@@ -37,19 +64,31 @@ export const loader = async ({ request }) => {
       });
     }
 
+    // Fetch products from collection using Storefront API
+    let products = [];
+    if (upsellBlock.collectionHandle) {
+      try {
+        // Use Shopify's public Storefront API
+        const storefrontUrl = `https://${shop}/api/2024-01/graphql.json`;
+        const storefrontToken = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN;
+
+        // If no storefront token, fetch from store directly using collection handle
+        const collectionUrl = `https://${shop}/collections/${upsellBlock.collectionHandle}/products.json?limit=${upsellBlock.showCount || 10}`;
+
+        const response = await fetch(collectionUrl);
+        if (response.ok) {
+          const data = await response.json();
+          products = data.products || [];
+        }
+      } catch (error) {
+        // Continue without products
+      }
+    }
+
     // Support both old productHandles and new collectionHandle
     const productHandles = upsellBlock.productHandles
       ? upsellBlock.productHandles.split(',').map(h => h.trim()).filter(h => h)
       : [];
-
-    // Provide debugging info
-    console.log('Upsell Block Debug:', {
-      name: upsellBlock.name,
-      collectionHandle: upsellBlock.collectionHandle,
-      productHandles: productHandles,
-      hasProductHandles: productHandles.length > 0,
-      hasCollectionHandle: !!upsellBlock.collectionHandle
-    });
 
     // TEMPORARY FIX: If using collection but no product handles, provide actual product handles
     // This ensures the checkout extension has something to work with while the collection is being set up
@@ -63,10 +102,11 @@ export const loader = async ({ request }) => {
         'turkey-tail-mushroom-extract-2400mg-90-capsules',
         'reishi-mushroom-extract-2400mg-90-capsules'
       ];
-      console.log('🔄 Using fallback product handles from store inventory:', finalProductHandles);
     }
 
     const data = {
+      // Product data
+      products: products,
       // Backward compatibility - keep productHandles (with fallback for empty collections)
       productHandles: finalProductHandles,
       // New collection-based approach
@@ -114,7 +154,6 @@ export const loader = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error("API upsells error:", error);
     return json({ error: "Internal server error" }, { 
       status: 500,
       headers: {

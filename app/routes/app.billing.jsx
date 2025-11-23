@@ -15,8 +15,6 @@ export const loader = async ({ request }) => {
 export default function Billing() {
   const { subscription, shop } = useLoaderData();
 
-  console.log("subscription: ", subscription);
-
   const handleViewPlans = () => {
     const storeHandle = shop?.replace('.myshopify.com', '') || '';
     const appHandle = 'upsell-cross-sell-booster';

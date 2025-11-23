@@ -1,0 +1,646 @@
+{% comment %}
+  Product Page Upsells Block
+  Shows related/upsell products on product pages
+{% endcomment %}
+
+<div class="product-upsells-block" data-product-id="{{ product.id }}">
+  <style>
+    .product-upsells-block {
+      margin: 40px 0;
+      padding: {{ block.settings.padding }}px;
+      background-color: {{ block.settings.background_color }};
+      border-radius: {{ block.settings.border_radius }}px;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .product-upsells-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .product-upsells-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: {{ block.settings.text_color }};
+      margin: 0;
+    }
+
+    .product-upsells-arrows {
+      display: flex;
+      gap: 8px;
+    }
+
+    .product-upsells-arrow {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #d1d5db;
+      background: white;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #374151;
+    }
+
+    .product-upsells-arrow:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+    }
+
+    .product-upsells-arrow:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .product-upsells-container {
+      overflow: hidden;
+      position: relative;
+    }
+
+    .product-upsells-track {
+      display: flex;
+      gap: 12px;
+      transition: transform 0.3s ease;
+    }
+
+    .upsell-card-wrapper {
+      flex: 0 0 auto;
+      width: calc((100% - 24px) / 3);
+      min-width: 250px;
+    }
+
+    .upsell-card {
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 12px;
+      background: white;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      height: 100%;
+      transition: box-shadow 0.2s;
+      box-sizing: border-box;
+    }
+
+    .upsell-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .upsell-card-image {
+      flex-shrink: 0;
+      width: 70px;
+      height: 70px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #f9fafb;
+    }
+
+    .upsell-card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .upsell-card-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .upsell-card-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: {{ block.settings.text_color }};
+      margin: 0;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .upsell-card-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .upsell-card-price {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    .upsell-card-price-sale {
+      color: #dc2626;
+      font-weight: 600;
+    }
+
+    .upsell-card-price-compare {
+      color: #6b7280;
+      text-decoration: line-through;
+      font-size: 12px;
+    }
+
+    .upsell-card-button {
+      flex-shrink: 0;
+      background: {{ block.settings.button_color }};
+      color: {{ block.settings.button_text_color }};
+      border: none;
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      align-self: center;
+    }
+
+    .upsell-card-button:hover {
+      opacity: 0.9;
+    }
+
+    .upsell-card-button:disabled {
+      background: #6b7280;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .upsell-card-button.added {
+      background: #059669 !important;
+      color: white !important;
+    }
+
+    .upsell-loading {
+      text-align: center;
+      padding: 40px;
+      color: {{ block.settings.text_color }};
+    }
+
+    @media (max-width: 768px) {
+      .product-upsells-block {
+        padding-left: 0;
+        padding-right: 12px;
+      }
+
+      .product-upsells-arrows {
+        display: none;
+      }
+
+      .product-upsells-container {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        cursor: grab;
+      }
+
+      .product-upsells-container::-webkit-scrollbar {
+        display: none;
+      }
+
+      .product-upsells-container:active {
+        cursor: grabbing;
+      }
+
+      .product-upsells-track {
+        transition: none;
+        scroll-snap-type: x mandatory;
+      }
+
+      .upsell-card-wrapper {
+        width: 85%;
+        scroll-snap-align: start;
+      }
+
+      .upsell-card {
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .upsell-card-image {
+        width: 55px;
+        height: 55px;
+      }
+
+      .upsell-card-title {
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .upsell-card-price {
+        font-size: 12px;
+      }
+
+      .upsell-card-price-compare {
+        font-size: 11px;
+      }
+
+      .upsell-card-button {
+        padding: 6px 14px;
+        font-size: 11px;
+      }
+    }
+  </style>
+
+  <div class="product-upsells-header">
+    <h3 class="product-upsells-title">{{ block.settings.title }}</h3>
+    <div class="product-upsells-arrows">
+      <button type="button" class="product-upsells-arrow" id="prev-arrow" disabled>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>
+      <button type="button" class="product-upsells-arrow" id="next-arrow">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="product-upsells-container">
+    <div class="upsell-loading" id="upsell-loading">
+      Loading recommendations...
+    </div>
+    <div class="product-upsells-track" id="upsell-products" style="display: none;"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const shopDomain = '{{ shop.permanent_domain }}';
+  const productId = '{{ product.id }}';
+  const showCount = {{ block.settings.show_count }};
+  const collectionHandle = '{{ block.settings.collection.handle }}';
+  const shopCurrency = '{{ shop.currency }}';
+
+  // Helper function to get currency symbol
+  function getCurrencySymbol(currencyCode) {
+    const symbols = {
+      'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'AUD': '$', 'CAD': '$',
+      'CHF': 'CHF', 'CNY': '¥', 'SEK': 'kr', 'NZD': '$', 'MXN': '$',
+      'SGD': '$', 'HKD': '$', 'NOK': 'kr', 'KRW': '₩', 'TRY': '₺',
+      'RUB': '₽', 'INR': '₹', 'BRL': 'R$', 'ZAR': 'R', 'DKK': 'kr',
+      'PLN': 'zł', 'TWD': 'NT$', 'THB': '฿', 'MYR': 'RM'
+    };
+    return symbols[currencyCode] || currencyCode + ' ';
+  }
+  const currencySymbol = getCurrencySymbol(shopCurrency);
+
+  let currentIndex = 0;
+
+  function initializeSlider() {
+    const track = document.getElementById('upsell-products');
+    const prevBtn = document.getElementById('prev-arrow');
+    const nextBtn = document.getElementById('next-arrow');
+    const cards = track.querySelectorAll('.upsell-card-wrapper');
+
+    if (!track || !prevBtn || !nextBtn || cards.length === 0) return;
+
+    const cardsPerView = 3;
+    const maxIndex = Math.max(0, cards.length - cardsPerView);
+
+    function updateButtons() {
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex >= maxIndex;
+    }
+
+    function slide() {
+      const cardWidth = cards[0].offsetWidth;
+      const gap = 12; // matches CSS gap
+      const offset = currentIndex * (cardWidth + gap);
+      track.style.transform = `translateX(-${offset}px)`;
+      updateButtons();
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex--;
+        slide();
+      }
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (currentIndex < maxIndex) {
+        currentIndex++;
+        slide();
+      }
+    });
+
+    updateButtons();
+  }
+
+  async function loadUpsells() {
+    const loadingEl = document.getElementById('upsell-loading');
+    const productsEl = document.getElementById('upsell-products');
+
+    try {
+      // If no collection selected, hide loading
+      if (!collectionHandle) {
+        loadingEl.textContent = 'Please select a collection in the theme settings';
+        return;
+      }
+
+      // Fetch products directly from Shopify
+      const collectionUrl = `https://${shopDomain}/collections/${collectionHandle}/products.json?limit=${showCount}`;
+      const response = await fetch(collectionUrl);
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+
+      const data = await response.json();
+
+      if (!data.products || data.products.length === 0) {
+        loadingEl.textContent = 'No products found in this collection';
+        return;
+      }
+
+      // Render products
+      const productsToShow = data.products.slice(0, showCount);
+      const html = productsToShow.map(product => {
+        const variant = product.variants?.[0];
+        if (!variant) return '';
+
+        const price = parseFloat(variant.price || 0);
+        const comparePrice = parseFloat(variant.compare_at_price || 0);
+        const hasDiscount = comparePrice > price;
+
+        // Format Shopify variant ID for cart
+        const variantId = variant.id;
+
+        // Get product image - Shopify products.json uses different structure
+        const imageUrl = product.image?.src || product.images?.[0]?.src || '';
+
+        return `
+          <div class="upsell-card-wrapper">
+            <div class="upsell-card">
+              <div class="upsell-card-image">
+                ${imageUrl ?
+                  `<img src="${imageUrl}" alt="${product.title}" loading="lazy">` :
+                  '<div style="width: 100%; height: 100%; background: #f9fafb; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #9ca3af;">No image</div>'
+                }
+              </div>
+              <div class="upsell-card-info">
+                <h4 class="upsell-card-title">
+                  <a href="/products/${product.handle}">
+                    ${product.title}
+                  </a>
+                </h4>
+                <div class="upsell-card-price">
+                  ${hasDiscount ? `<span class="upsell-card-price-compare">${currencySymbol}${comparePrice.toFixed(2)}</span>` : ''}
+                  <span class="upsell-card-price-sale">${currencySymbol}${price.toFixed(2)}</span>
+                </div>
+              </div>
+              <button class="upsell-card-button" onclick="addToCart(${variantId}, this)">
+                {{ block.settings.button_text }}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      productsEl.innerHTML = html;
+      loadingEl.style.display = 'none';
+      productsEl.style.display = 'flex';
+
+      // Initialize slider navigation
+      initializeSlider();
+    } catch (error) {
+      loadingEl.textContent = 'Failed to load products. Please try again.';
+    }
+  }
+
+  // Add to cart function (matches your theme's approach)
+  window.addToCart = async function(variantId, button) {
+    const originalText = button.textContent;
+    button.textContent = 'Adding...';
+    button.disabled = true;
+
+    try {
+      // Add to cart
+      const response = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: [{
+            id: variantId,
+            quantity: 1
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.description || 'Failed to add to cart');
+      }
+
+      // Click cart button to open drawer
+      const cartBtn = document.querySelector('.cartbtnicon, #cart-icon-bubble, .header__icon--cart');
+      if (cartBtn) {
+        cartBtn.click();
+      }
+
+      // Remove is-empty class
+      const cartDrawer = document.querySelector('.cart-drawer, cart-drawer');
+      if (cartDrawer) {
+        cartDrawer.classList.remove('is-empty');
+      }
+
+      // Hide empty state
+      const emptyDrawer = document.querySelector('.drawer__inner-empty');
+      if (emptyDrawer) {
+        emptyDrawer.style.display = 'none';
+      }
+
+      // Reload cart drawer content from current page
+      setTimeout(() => {
+        // Fetch current page
+        fetch(location.href)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Update cart drawer
+            const newCartDrawer = doc.querySelector('#CartDrawer, cart-drawer, .cart-drawer');
+            const currentCartDrawer = document.querySelector('cart-drawer, .cart-drawer');
+            if (newCartDrawer && currentCartDrawer) {
+              currentCartDrawer.innerHTML = newCartDrawer.innerHTML;
+            }
+
+            // Update cart icon bubble
+            const newCartIcon = doc.querySelector('#cart-icon-bubble');
+            const currentCartIcon = document.querySelector('#cart-icon-bubble');
+            if (newCartIcon && currentCartIcon) {
+              currentCartIcon.innerHTML = newCartIcon.innerHTML;
+            }
+          })
+          .catch(err => {});
+      }, 100);
+
+      // Update button
+      button.textContent = '✓ Added!';
+      button.classList.add('added');
+
+      // Reset button
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.classList.remove('added');
+        button.disabled = false;
+      }, 2000);
+
+    } catch (error) {
+      button.textContent = error.message || 'Error';
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+      }, 2000);
+    }
+  };
+
+  // Load upsells when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadUpsells);
+  } else {
+    loadUpsells();
+  }
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Product Upsells",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "You may also like"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection",
+      "info": "Select which collection's products to show as upsells"
+    },
+    {
+      "type": "range",
+      "id": "show_count",
+      "label": "Number of products",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "card_width",
+      "label": "Card width",
+      "min": 150,
+      "max": 400,
+      "step": 10,
+      "default": 200,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "grid_gap",
+      "label": "Space between cards",
+      "min": 10,
+      "max": 40,
+      "step": 5,
+      "default": 20,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "label": "Padding",
+      "min": 0,
+      "max": 60,
+      "step": 5,
+      "default": 20,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border radius",
+      "min": 0,
+      "max": 30,
+      "step": 2,
+      "default": 8,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Button"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Add to Cart"
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "label": "Button radius",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "default": 4,
+      "unit": "px"
+    }
+  ]
+}
+{% endschema %}

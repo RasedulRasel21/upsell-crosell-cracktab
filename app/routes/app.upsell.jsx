@@ -109,18 +109,6 @@ export const loader = async ({ request }) => {
         if (editingUpsell && editingUpsell.shop !== session.shop) {
           editingUpsell = null; // Security: Only allow editing own upsells
         }
-        // Only allow editing checkout upsells
-        if (editingUpsell && editingUpsell.placement !== 'checkout') {
-          editingUpsell = null;
-        }
-      } else if (upsellBlocks.length > 0) {
-        // If not editing but upsells exist, redirect to edit the existing one
-        throw new Response("", {
-          status: 302,
-          headers: {
-            Location: `/app/upsell?edit=${upsellBlocks[0].id}`,
-          },
-        });
       }
       
       console.log("Processed collections count:", collections.length);
@@ -166,6 +154,7 @@ export const action = async ({ request }) => {
       const selectedCollection = formData.get("selectedCollection");
       const displaySettings = JSON.parse(formData.get("displaySettings") || "{}");
       const upsellId = formData.get("upsellId");
+      const placement = formData.get("placement") || "checkout";
 
       // Get collection handle from GraphQL ID
       let collectionHandle = "";
@@ -196,11 +185,20 @@ export const action = async ({ request }) => {
       }
 
       const styleSettings = JSON.parse(formData.get("styleSettings") || "{}");
-      
+
+      // Create dynamic name based on placement
+      const placementNames = {
+        "product_page": "Product Page",
+        "cart_page": "Cart Page",
+        "cart_drawer": "Cart Drawer",
+        "checkout": "Checkout"
+      };
+      const placementName = placementNames[placement] || placement;
+
       const upsellData = {
         shop: session.shop,
-        name: `Checkout Upsell - ${new Date().toLocaleDateString()}`,
-        placement: "checkout",
+        name: `${placementName} Upsell - ${new Date().toLocaleDateString()}`,
+        placement: placement,
         productHandles: null, // Keep for backward compatibility
         collectionHandle: collectionHandle,
         title: displaySettings.sliderTitle || "Recommended for you",
@@ -277,6 +275,7 @@ export default function Upsell() {
   const { collections = [], upsellBlocks = [], editingUpsell = null, hasActiveSubscription = false, error } = data;
 
   // State management
+  const [placement, setPlacement] = useState(editingUpsell?.placement || "cart_drawer");
   const [selectedCollection, setSelectedCollection] = useState("");
   const [sliderTitle, setSliderTitle] = useState("Recommended for you");
   const [buttonText, setButtonText] = useState("Add");
@@ -285,9 +284,27 @@ export default function Upsell() {
   const [searchQuery, setSearchQuery] = useState("");
   const [hasCreatedUpsell, setHasCreatedUpsell] = useState(false);
 
+  // Placement options (Product Page removed - managed via theme customizer)
+  const placementOptions = [
+    { label: "Cart Drawer (FREE)", value: "cart_drawer" },
+    { label: "Cart Page (FREE)", value: "cart_page" },
+    { label: hasActiveSubscription ? "Checkout Page (PRO)" : "Checkout Page (PRO - Upgrade Required)", value: "checkout" },
+  ];
+
+  // Helper to get placement display name
+  const getPlacementName = (placementValue) => {
+    const names = {
+      "cart_page": "Cart Page",
+      "cart_drawer": "Cart Drawer",
+      "checkout": "Checkout Page"
+    };
+    return names[placementValue] || placementValue;
+  };
+
   // Populate form if editing
   useEffect(() => {
     if (editingUpsell) {
+      setPlacement(editingUpsell.placement || "product_page");
       setSliderTitle(editingUpsell.title || "Recommended for you");
       setButtonText(editingUpsell.buttonText || "Add");
       setProperties(editingUpsell.properties || "");
@@ -325,19 +342,36 @@ export default function Upsell() {
 
   const handleCreateUpsell = () => {
     if (!selectedCollection) {
+      alert("Please select a collection first!");
       return;
     }
+
+    // Check if trying to create checkout upsell without Pro plan
+    if (placement === "checkout" && !hasActiveSubscription) {
+      alert("Checkout upsells require Pro plan. Please upgrade or choose a different placement.");
+      return;
+    }
+
+    console.log("Creating upsell with:", {
+      placement,
+      selectedCollection,
+      sliderTitle,
+      buttonText,
+      showCount,
+      properties
+    });
 
     const formData = new FormData();
     formData.append("actionType", editingUpsell ? "update_upsell" : "create_upsell");
     formData.append("selectedCollection", selectedCollection);
+    formData.append("placement", placement);
     formData.append("displaySettings", JSON.stringify({
       sliderTitle,
       buttonText,
       properties,
       showCount,
     }));
-    
+
     if (editingUpsell) {
       formData.append("upsellId", editingUpsell.id);
     }
@@ -380,7 +414,7 @@ export default function Upsell() {
               {sliderTitle}
             </Text>
             <Text variant="bodySm" style={{ color: "#000000", opacity: 0.7 }}>
-              Products from "{selectedCollectionData.title}" collection ({selectedCollectionData.productsCount} products) will appear during checkout
+              Products from "{selectedCollectionData.title}" collection ({selectedCollectionData.productsCount} products) will appear on the {getPlacementName(placement).toLowerCase()}
             </Text>
 
             <BlockStack gap="200">
@@ -441,9 +475,17 @@ export default function Upsell() {
 
   return (
     <Frame>
-      <Page>
-        <TitleBar title={editingUpsell ? "Edit Checkout Upsell" : "Create Checkout Upsell"} />
-      
+      <Page
+        title={editingUpsell ? `Edit ${getPlacementName(placement)} Upsell` : "Create Upsell"}
+        primaryAction={{
+          content: editingUpsell ? `Update ${getPlacementName(placement)} Upsell` : `Create ${getPlacementName(placement)} Upsell`,
+          onAction: handleCreateUpsell,
+          loading: isLoading,
+          disabled: isLoading || !selectedCollection || (placement === "checkout" && !hasActiveSubscription)
+        }}
+      >
+        <TitleBar title={editingUpsell ? `Edit ${getPlacementName(placement)} Upsell` : "Create Upsell"} />
+
       <BlockStack gap="500">
         {error && (
           <Banner status="critical">
@@ -463,20 +505,52 @@ export default function Upsell() {
           </Banner>
         )}
 
-        {/* Checkout Upsell Information */}
+        {/* Placement Type Selector */}
+        <Card>
+          <BlockStack gap="400">
+            <Text as="h2" variant="headingMd">
+              Select Upsell Placement
+            </Text>
+            <Select
+              label="Where should the upsell appear?"
+              options={placementOptions}
+              value={placement}
+              onChange={setPlacement}
+              disabled={editingUpsell !== null}
+              helpText={editingUpsell ? "Placement cannot be changed when editing" : "Choose where customers will see your upsell products"}
+            />
+
+            {/* Pro Plan Warning for Checkout */}
+            {placement === "checkout" && !hasActiveSubscription && (
+              <Banner status="warning">
+                <BlockStack gap="200">
+                  <Text variant="bodyMd" fontWeight="bold">
+                    Checkout upsells require the Pro Plan
+                  </Text>
+                  <Text variant="bodyMd">
+                    Upgrade to Pro to unlock checkout upsells and increase your average order value.
+                  </Text>
+                  <Button url="/app/billing">Upgrade to Pro</Button>
+                </BlockStack>
+              </Banner>
+            )}
+          </BlockStack>
+        </Card>
+
+        {/* Dynamic Upsell Information */}
         <Banner status="info">
           <BlockStack gap="200">
             <Text variant="bodyMd" fontWeight="bold">
-              Checkout Upsell - One Upsell Per Store:
+              {getPlacementName(placement)} Upsell:
             </Text>
             <Text variant="bodyMd">
-              • You can create only one checkout upsell per store
+              • Select a collection to show up to {showCount} products on the {getPlacementName(placement).toLowerCase()}
             </Text>
             <Text variant="bodyMd">
-              • Select a collection to show up to {showCount} products during checkout
+              • Products from the collection will be displayed automatically
             </Text>
             <Text variant="bodyMd">
-              • Products from the collection will be displayed automatically during checkout
+              • {placement === "checkout" ? "Pro Plan required" : "Available on the Free Plan"}
             </Text>
           </BlockStack>
         </Banner>
@@ -642,52 +716,30 @@ export default function Upsell() {
                 <LivePreview />
               </BlockStack>
 
-              {/* Action Buttons */}
+              {/* How it Works */}
               <Card>
                 <BlockStack gap="400">
                   <Text as="h3" variant="headingMd">
-                    Actions
+                    How it works
                   </Text>
-                  
-                  {!hasCreatedUpsell ? (
-                    <BlockStack gap="200">
-                      <Button
-                        primary
-                        fullWidth
-                        onClick={handleCreateUpsell}
-                        loading={isLoading}
-                        disabled={isLoading || !selectedCollection}
-                      >
-                        {isLoading 
-                          ? (editingUpsell ? "Updating..." : "Creating...") 
-                          : (editingUpsell ? "Update Checkout Upsell" : "Create Checkout Upsell")
-                        }
-                      </Button>
-                    </BlockStack>
-                  ) : (
-                    <BlockStack gap="200">
-                      <Banner status="success">
-                        <Text variant="bodyMd">
-                          ✅ Upsell created successfully! Your products will now show during checkout.
-                        </Text>
-                      </Banner>
-                    </BlockStack>
+
+                  {hasCreatedUpsell && (
+                    <Banner status="success">
+                      <Text variant="bodyMd">
+                        ✅ Upsell created successfully! Your products will now appear on the {getPlacementName(placement).toLowerCase()}.
+                      </Text>
+                    </Banner>
                   )}
-                  
-                  <Divider />
-                  
+
                   <BlockStack gap="200">
-                    <Text variant="bodyMd" fontWeight="bold">
-                      How it works:
-                    </Text>
                     <Text variant="bodySm" color="subdued">
-                      • Your upsell products will automatically appear during the checkout process
+                      • Your upsell products will automatically appear on the {getPlacementName(placement).toLowerCase()}
                     </Text>
                     <Text variant="bodySm" color="subdued">
                       • Customers can add recommended products directly to their cart
                     </Text>
                     <Text variant="bodySm" color="subdued">
-                      • No theme configuration needed - it works automatically
+                      • {placement === "checkout" ? "No theme configuration needed - it works automatically" : "Easy setup with theme app extension"}
                     </Text>
                   </BlockStack>
                 </BlockStack>

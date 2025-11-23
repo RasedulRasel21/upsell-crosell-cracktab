@@ -260,21 +260,24 @@ export default function Dashboard() {
           <Layout.Section>
             <Card>
               <BlockStack gap="400">
-                <Text as="h2" variant="headingLg">
-                  Your Checkout Upsell
-                </Text>
-                
+                <InlineStack align="space-between">
+                  <Text as="h2" variant="headingLg">
+                    Your Upsells
+                  </Text>
+                  <Button url="/app/manage-upsells">View All</Button>
+                </InlineStack>
+
                 {upsellBlocks.length === 0 ? (
                   <EmptyState
-                    heading="No checkout upsell created yet"
+                    heading="No upsells created yet"
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                     action={{
-                      content: "Create your checkout upsell",
+                      content: "Create your first upsell",
                       url: "/app/upsell"
                     }}
                   >
                     <Text variant="bodyMd" color="subdued">
-                      Create a checkout upsell to recommend products during the checkout process and increase sales.
+                      Create upsells to recommend products and increase sales across your store.
                     </Text>
                   </EmptyState>
                 ) : (
@@ -284,6 +287,7 @@ export default function Dashboard() {
                     renderItem={(upsell) => {
                       const { id, name, placement, productHandles, title, showCount, active, createdAt, collectionName } = upsell;
                       const productCount = productHandles ? productHandles.split(',').filter(h => h.trim()).length : 0;
+                      const isCheckout = placement === "checkout";
 
                       return (
                         <ResourceItem
@@ -292,13 +296,16 @@ export default function Dashboard() {
                         >
                           <InlineStack align="space-between">
                             <BlockStack gap="200">
-                              <InlineStack gap="300" align="start">
+                              <InlineStack gap="300" align="start" wrap={false}>
                                 <Text variant="bodyMd" fontWeight="bold" as="h3">
                                   {name}
                                 </Text>
                                 <Badge status={active ? "success" : "attention"}>
                                   {active ? "Active" : "Inactive"}
                                 </Badge>
+                                {isCheckout && (
+                                  <Badge status="info">Pro</Badge>
+                                )}
                               </InlineStack>
 
                               <InlineStack gap="400" wrap>
@@ -371,56 +378,45 @@ export default function Dashboard() {
                     <InlineStack align="space-between">
                       <Text variant="bodyMd">Plan Status:</Text>
                       <Badge status={hasActiveSubscription ? "success" : "attention"}>
-                        {hasActiveSubscription ? "Pro Plan Active" : "Free Plan"}
+                        {hasActiveSubscription ? "Pro Plan" : "Free Plan"}
                       </Badge>
                     </InlineStack>
-                    
+
                     <InlineStack align="space-between">
-                      <Text variant="bodyMd">Selected Collection:</Text>
+                      <Text variant="bodyMd">Total Upsells:</Text>
                       <Text variant="bodyMd" fontWeight="bold">
-                        {upsellBlocks.length > 0 && upsellBlocks[0]?.collectionName ?
-                          upsellBlocks[0].collectionName :
-                          (upsellBlocks.length > 0 ? "Legacy Products" : "None")
-                        }
+                        {upsellBlocks.length}
                       </Text>
                     </InlineStack>
-                    
+
                     <InlineStack align="space-between">
-                      <Text variant="bodyMd">Upsell Status:</Text>
-                      <Badge status={upsellBlocks.length > 0 && upsellBlocks[0]?.active ? "success" : "attention"}>
-                        {upsellBlocks.length > 0 ? (upsellBlocks[0]?.active ? "Active" : "Inactive") : "Not Created"}
-                      </Badge>
+                      <Text variant="bodyMd">Active Upsells:</Text>
+                      <Text variant="bodyMd" fontWeight="bold">
+                        {upsellBlocks.filter(u => u.active).length}
+                      </Text>
                     </InlineStack>
                   </BlockStack>
                 </BlockStack>
               </Card>
 
               {/* Quick Actions */}
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h3" variant="headingMd">
-                    Quick Actions
-                  </Text>
-                  
-                  <BlockStack gap="200">
-                    {upsellBlocks.length === 0 && (
-                      <Link to="/app/upsell">
+              {upsellBlocks.length > 0 && (
+                <Card>
+                  <BlockStack gap="400">
+                    <Text as="h3" variant="headingMd">
+                      Quick Actions
+                    </Text>
+
+                    <BlockStack gap="200">
+                      <Link to="/app/manage-upsells">
                         <Button fullWidth primary>
-                          Create Your Checkout Upsell
+                          Manage All Upsells
                         </Button>
                       </Link>
-                    )}
-                    
-                    {upsellBlocks.length > 0 && (
-                      <Link to={`/app/upsell?edit=${upsellBlocks[0].id}`}>
-                        <Button fullWidth primary>
-                          Edit Your Checkout Upsell
-                        </Button>
-                      </Link>
-                    )}
+                    </BlockStack>
                   </BlockStack>
-                </BlockStack>
-              </Card>
+                </Card>
+              )}
 
               {/* Help */}
               <Card>

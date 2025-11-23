@@ -3,12 +3,11 @@
 
 client_id = "6b9e2a7c98e68418ac8f3effc79113b2"
 name = "Upsell Booster - Staging"
-handle = "upsell-cross-sell-booster-staging"
 application_url = "https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = false
+automatically_update_urls_on_dev = true
 
 [webhooks]
 api_version = "2025-07"
