@@ -15,8 +15,8 @@ export default extension(
   'purchase.checkout.block.render',
   async (root, api) => {
 
-    
-    const { query, shop, cartLines, applyCartLinesChange } = api;
+
+    const { query, shop, cartLines, applyCartLinesChange, localization } = api;
     
     // State variables
     let upsellProducts = [];
@@ -139,7 +139,9 @@ export default extension(
       if (!variant) return null;
 
       const isAdding = addingToCart[variant.id] || false;
-      const currencyCode = variant.price.currencyCode;
+      // Use the checkout's currency from localization API for consistent currency display
+      const checkoutCurrency = localization?.currency?.isoCode;
+      const currencyCode = checkoutCurrency || variant.price.currencyCode;
       const currencySymbol = getCurrencySymbol(currencyCode);
       const price = parseFloat(variant.price.amount).toFixed(2);
       const compareAtPrice = variant.compareAtPrice ? parseFloat(variant.compareAtPrice.amount).toFixed(2) : null;
