@@ -51,11 +51,12 @@ export const PLANS = {
   FREE: {
     name: "Free",
     price: 0,
-    checkoutUpsellsAllowed: false, // Checkout upsells NOT allowed
+    checkoutUpsellsAllowed: true,  // Checkout upsells allowed
     productUpsellsAllowed: true,   // Product page upsells allowed
-    upsellLimit: null,              // Unlimited product page upsells
+    upsellLimit: null,              // Unlimited upsells
     features: [
       "Unlimited product page upsells",
+      "Checkout page upsells",
       "Up to 10 products per upsell",
       "Customizable styling",
       "Basic analytics",

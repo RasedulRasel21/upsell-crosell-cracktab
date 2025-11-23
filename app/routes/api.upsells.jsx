@@ -1,6 +1,4 @@
 import { json } from "@remix-run/node";
-import { authenticate } from "../shopify.server";
-import { getCurrentPlan } from "../shopify.server";
 
 export const loader = async ({ request }) => {
   try {
@@ -13,34 +11,7 @@ export const loader = async ({ request }) => {
       return json({ error: "Shop parameter is required" }, { status: 400 });
     }
 
-    // Check plan restrictions for checkout upsells
-    if (placement === "checkout") {
-      try {
-        // Authenticate and check billing
-        const { billing, session } = await authenticate.public.checkout(request);
-        const currentPlan = await getCurrentPlan(billing);
-
-        // If FREE plan, deny checkout upsells
-        if (!currentPlan.checkoutUpsellsAllowed) {
-          return json({
-            productHandles: [],
-            collectionHandle: null,
-            title: "",
-            showCount: 0,
-            message: "Upgrade to Pro to use checkout upsells"
-          }, {
-            headers: {
-              "Access-Control-Allow-Origin": "*",
-              "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-              "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            },
-          });
-        }
-      } catch (authError) {
-        // Allow upsells if we can't check (backward compatibility)
-      }
-    }
-    // Product page upsells are always allowed (both FREE and PRO)
+    // All upsells are now free - no plan restrictions
 
     // Get active upsell blocks for this shop and placement
     const { getActiveUpsellBlock } = await import("../models/upsell.server");

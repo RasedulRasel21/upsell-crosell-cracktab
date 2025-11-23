@@ -288,7 +288,7 @@ export default function Upsell() {
   const placementOptions = [
     { label: "Cart Drawer (FREE)", value: "cart_drawer" },
     { label: "Cart Page (FREE)", value: "cart_page" },
-    { label: hasActiveSubscription ? "Checkout Page (PRO)" : "Checkout Page (PRO - Upgrade Required)", value: "checkout" },
+    { label: "Checkout Page (FREE)", value: "checkout" },
   ];
 
   // Helper to get placement display name
@@ -343,12 +343,6 @@ export default function Upsell() {
   const handleCreateUpsell = () => {
     if (!selectedCollection) {
       alert("Please select a collection first!");
-      return;
-    }
-
-    // Check if trying to create checkout upsell without Pro plan
-    if (placement === "checkout" && !hasActiveSubscription) {
-      alert("Checkout upsells require Pro plan. Please upgrade or choose a different placement.");
       return;
     }
 
@@ -520,20 +514,6 @@ export default function Upsell() {
               helpText={editingUpsell ? "Placement cannot be changed when editing" : "Choose where customers will see your upsell products"}
             />
 
-            {/* Pro Plan Warning for Checkout */}
-            {placement === "checkout" && !hasActiveSubscription && (
-              <Banner status="warning">
-                <BlockStack gap="200">
-                  <Text variant="bodyMd" fontWeight="bold">
-                    Checkout upsells require the Pro Plan
-                  </Text>
-                  <Text variant="bodyMd">
-                    Upgrade to Pro to unlock checkout upsells and increase your average order value.
-                  </Text>
-                  <Button url="/app/billing">Upgrade to Pro</Button>
-                </BlockStack>
-              </Banner>
-            )}
           </BlockStack>
         </Card>
 
