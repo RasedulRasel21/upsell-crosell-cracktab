@@ -475,7 +475,7 @@ export default function Upsell() {
           content: editingUpsell ? `Update ${getPlacementName(placement)} Upsell` : `Create ${getPlacementName(placement)} Upsell`,
           onAction: handleCreateUpsell,
           loading: isLoading,
-          disabled: isLoading || !selectedCollection || (placement === "checkout" && !hasActiveSubscription)
+          disabled: isLoading || !selectedCollection
         }}
       >
         <TitleBar title={editingUpsell ? `Edit ${getPlacementName(placement)} Upsell` : "Create Upsell"} />
@@ -530,7 +530,7 @@ export default function Upsell() {
               • Products from the collection will be displayed automatically
             </Text>
             <Text variant="bodyMd">
-              • {placement === "checkout" ? "Pro Plan required" : "Available on the Free Plan"}
+              • Available on the Free Plan
             </Text>
           </BlockStack>
         </Banner>
