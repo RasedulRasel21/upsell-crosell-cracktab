@@ -139,9 +139,25 @@ export default extension(
       if (!variant) return null;
 
       const isAdding = addingToCart[variant.id] || false;
+
+      // Debug: Log the full price object to see what currency is returned
+      console.log('💰 Product price data:', {
+        productTitle: product.title,
+        priceAmount: variant.price?.amount,
+        priceCurrency: variant.price?.currencyCode,
+        fullPriceObject: JSON.stringify(variant.price)
+      });
+
       // Use the currency from the product price - Storefront API returns price in store's currency
       const currencyCode = variant.price.currencyCode || 'USD';
       const currencySymbol = getCurrencySymbol(currencyCode);
+
+      console.log('💱 Currency detection:', {
+        currencyCode,
+        currencySymbol,
+        productTitle: product.title
+      });
+
       const price = parseFloat(variant.price.amount).toFixed(2);
       const compareAtPrice = variant.compareAtPrice ? parseFloat(variant.compareAtPrice.amount).toFixed(2) : null;
       const hasDiscount = compareAtPrice && parseFloat(compareAtPrice) > parseFloat(price);
@@ -514,6 +530,16 @@ export default extension(
 
             const collectionData = collectionQuery.data?.collection;
 
+            // Debug: Log raw collection data to check currency
+            if (collectionData?.products?.edges?.[0]) {
+              const firstProduct = collectionData.products.edges[0].node;
+              const firstVariant = firstProduct?.variants?.edges?.[0]?.node;
+              console.log('🔍 RAW COLLECTION DATA - First product:', {
+                title: firstProduct?.title,
+                variantPrice: firstVariant?.price,
+                currencyFromAPI: firstVariant?.price?.currencyCode
+              });
+            }
 
             if (collectionData?.products?.edges?.length > 0) {
               productsToFetch = collectionData.products.edges.map(edge => edge.node);
