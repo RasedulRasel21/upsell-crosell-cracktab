@@ -16,7 +16,24 @@ export default extension(
   async (root, api) => {
 
 
-    const { query, shop, cartLines, applyCartLinesChange, localization } = api;
+    const { query, shop, cartLines, applyCartLinesChange, localization, cost } = api;
+
+    // Get the current currency from the checkout
+    // The localization object provides the buyer's currency
+    let currentCurrency = 'USD';
+    try {
+      // Try to get currency from localization (buyer's selected currency)
+      if (localization?.currency?.current?.isoCode) {
+        currentCurrency = localization.currency.current.isoCode;
+      } else if (localization?.currency?.isoCode) {
+        currentCurrency = localization.currency.isoCode;
+      } else if (cost?.totalAmount?.current?.currencyCode) {
+        // Fallback to cart total currency
+        currentCurrency = cost.totalAmount.current.currencyCode;
+      }
+    } catch (e) {
+      // Keep default USD
+    }
     
     // State variables
     let upsellProducts = [];
@@ -139,9 +156,8 @@ export default extension(
       if (!variant) return null;
 
       const isAdding = addingToCart[variant.id] || false;
-      // Use the checkout's currency from localization API for consistent currency display
-      const checkoutCurrency = localization?.currency?.isoCode;
-      const currencyCode = checkoutCurrency || variant.price.currencyCode;
+      // Use the checkout's currency - prioritize currentCurrency which we extracted at startup
+      const currencyCode = currentCurrency || variant.price.currencyCode;
       const currencySymbol = getCurrencySymbol(currencyCode);
       const price = parseFloat(variant.price.amount).toFixed(2);
       const compareAtPrice = variant.compareAtPrice ? parseFloat(variant.compareAtPrice.amount).toFixed(2) : null;

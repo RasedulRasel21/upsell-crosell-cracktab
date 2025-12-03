@@ -21,7 +21,8 @@ api_version = "2025-07"
   uri = "/webhooks/app/uninstalled"
 
 [access_scopes]
-scopes = "read_orders,read_products,unauthenticated_write_checkouts"
+# read_shop is required to fetch store currency
+scopes = "read_orders,read_products,read_shop,unauthenticated_write_checkouts"
 
 [auth]
 redirect_urls = [

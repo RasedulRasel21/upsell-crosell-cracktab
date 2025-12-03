@@ -103,6 +103,7 @@ export function formatPriceIntl(amount, currencyCode = 'USD', locale = 'en-US') 
 
 /**
  * Get store currency from Shopify Admin API
+ * Requires the `read_shop` scope to be enabled for the app
  * @param {object} admin - Shopify Admin API client
  * @returns {Promise<string>} The store's currency code
  */
@@ -113,14 +114,25 @@ export async function getStoreCurrency(admin) {
         query getShopCurrency {
           shop {
             currencyCode
+            name
           }
         }`
     );
 
     const result = await response.json();
-    return result?.data?.shop?.currencyCode || 'USD';
+
+    // Check for errors in the response
+    if (result.errors) {
+      console.error('GraphQL errors fetching store currency:', JSON.stringify(result.errors));
+      return 'USD';
+    }
+
+    const currencyCode = result?.data?.shop?.currencyCode;
+    console.log(`Store currency fetched: ${currencyCode} for shop: ${result?.data?.shop?.name}`);
+
+    return currencyCode || 'USD';
   } catch (error) {
-    console.error('Error fetching store currency:', error);
+    console.error('Error fetching store currency:', error.message || error);
     return 'USD';
   }
 }
