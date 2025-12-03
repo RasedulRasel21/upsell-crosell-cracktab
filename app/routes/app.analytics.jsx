@@ -38,10 +38,14 @@ import {
 } from "recharts";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { formatPrice, getStoreCurrency } from "../utils/currency";
 
 export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const { shop } = session;
+
+  // Get the store's currency
+  const storeCurrency = await getStoreCurrency(admin);
 
   try {
     const url = new URL(request.url);
@@ -209,7 +213,8 @@ export const loader = async ({ request }) => {
         name: p.placement === 'checkout' ? 'Checkout' : 'Cart',
         value: p._count.id,
         color: p.placement === 'checkout' ? '#5C6AC4' : '#00A0B0'
-      }))
+      })),
+      storeCurrency
     });
 
   } catch (error) {
@@ -317,7 +322,10 @@ export default function Analytics() {
     );
   }
 
-  const { analytics, summary, conversions, topProducts, chartData, placementBreakdown } = currentData;
+  const { analytics, summary, conversions, topProducts, chartData, placementBreakdown, storeCurrency = 'USD' } = currentData;
+
+  // Helper function to format price with store currency
+  const formatCurrency = (amount) => formatPrice(amount, storeCurrency);
   const conversionRate = summary.totalClicks > 0
     ? ((conversions.converted / summary.totalClicks) * 100).toFixed(1)
     : "0";
@@ -325,7 +333,7 @@ export default function Analytics() {
   // Prepare table data
   const tableRows = analytics.map(item => [
     item.productName + (item.variantTitle ? ` - ${item.variantTitle}` : ""),
-    `$${item.price.toFixed(2)}`,
+    formatCurrency(item.price),
     item.placement,
     item.upsellBlockName,
     item.addedToCart ? <Badge tone="success">Converted</Badge> : <Badge>Clicked</Badge>,
@@ -413,7 +421,7 @@ export default function Analytics() {
                 <Box padding="400">
                   <BlockStack gap="100">
                     <Text variant="bodyMd" tone="subdued">Total Value</Text>
-                    <Text variant="headingLg">${summary.totalValue.toFixed(2)}</Text>
+                    <Text variant="headingLg">{formatCurrency(summary.totalValue)}</Text>
                   </BlockStack>
                 </Box>
               </Card>
@@ -439,7 +447,7 @@ export default function Analytics() {
                             <YAxis />
                             <Tooltip
                               formatter={(value, name) => [
-                                name === 'revenue' ? `$${value.toFixed(2)}` : value,
+                                name === 'revenue' ? formatCurrency(value) : value,
                                 name === 'clicks' ? 'Clicks' : name === 'conversions' ? 'Conversions' : 'Revenue'
                               ]}
                             />
@@ -531,7 +539,7 @@ export default function Analytics() {
                         <XAxis dataKey="date" />
                         <YAxis />
                         <Tooltip
-                          formatter={(value) => [`$${value.toFixed(2)}`, 'Revenue']}
+                          formatter={(value) => [formatCurrency(value), 'Revenue']}
                         />
                         <Line
                           type="monotone"
@@ -567,7 +575,7 @@ export default function Analytics() {
                     rows={topProducts.map(product => [
                       product.productName,
                       product.clicks,
-                      `$${product.totalValue.toFixed(2)}`
+                      formatCurrency(product.totalValue)
                     ])}
                   />
                 ) : (

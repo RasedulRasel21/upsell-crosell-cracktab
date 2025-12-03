@@ -1,5 +1,5 @@
 FROM node:18-alpine
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl sqlite
 
 EXPOSE 3000
 
@@ -16,6 +16,12 @@ RUN npm remove @shopify/cli
 
 COPY . .
 
+# Copy backup scripts
+COPY scripts/ ./scripts/
+
 RUN npm run build
+
+# Create data directory for database persistence
+RUN mkdir -p /data /app/backups
 
 CMD ["npm", "run", "docker-start"]
