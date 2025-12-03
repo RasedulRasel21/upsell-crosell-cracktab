@@ -22,8 +22,7 @@ api_version = "2025-07"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-# read_shop is required to fetch store currency
-scopes = "read_products,read_shop,unauthenticated_write_checkouts"
+scopes = "read_products,unauthenticated_write_checkouts"
 
 [auth]
 redirect_urls = [

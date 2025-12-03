@@ -64,10 +64,9 @@ Value: https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app
 #### Variable 5: SCOPES
 ```
 Key: SCOPES
-Value: read_products,read_shop,unauthenticated_write_checkouts
+Value: read_products,unauthenticated_write_checkouts
 ```
 ✅ Shopify API scopes (comma-separated, no spaces)
-⚠️ **Important:** `read_shop` scope is required for currency detection
 
 #### Variable 6: SHOPIFY_UPSELL_BLOCK_ID
 ```
@@ -134,7 +133,7 @@ Before clicking Save, verify:
 - [ ] `SHOPIFY_API_KEY` = `304952a9812404378c88092ac78264ff`
 - [ ] `SHOPIFY_API_SECRET` = (your secret from Partners Dashboard)
 - [ ] `SHOPIFY_APP_URL` = `https://upsell-crosell-cracktab-app-bthv4.ondigitalocean.app`
-- [ ] `SCOPES` = `read_products,read_shop,unauthenticated_write_checkouts`
+- [ ] `SCOPES` = `read_products,unauthenticated_write_checkouts`
 - [ ] `SHOPIFY_UPSELL_BLOCK_ID` = `52229d14-8a57-481c-b8da-3d8df7ec0d71`
 - [ ] `SHOPIFY_CHECKOUT_UPSELLS_ID` = `fb871067-9c1a-44b1-81fe-5d8fe1b96825`
 - [ ] `NODE_ENV` = `production`
