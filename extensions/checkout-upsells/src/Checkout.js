@@ -133,6 +133,20 @@ export default extension(
       return symbols[currencyCode] || currencyCode + ' ';
     }
 
+    // Currencies where symbol comes after the amount (e.g., "12.00 kr" instead of "kr12.00")
+    const symbolAfterCurrencies = ['DKK', 'SEK', 'NOK', 'PLN', 'CZK', 'HUF', 'RON', 'ISK'];
+
+    // Helper function to format price with correct symbol position
+    function formatPrice(amount, currencyCode) {
+      const symbol = getCurrencySymbol(currencyCode);
+      const formattedAmount = parseFloat(amount).toFixed(2);
+
+      if (symbolAfterCurrencies.includes(currencyCode)) {
+        return `${formattedAmount} ${symbol}`;
+      }
+      return `${symbol}${formattedAmount}`;
+    }
+
     // Function to create product card
     function createProductCard(product) {
       const variant = product.variants?.edges?.[0]?.node;
@@ -140,24 +154,8 @@ export default extension(
 
       const isAdding = addingToCart[variant.id] || false;
 
-      // Debug: Log the full price object to see what currency is returned
-      console.log('💰 Product price data:', {
-        productTitle: product.title,
-        priceAmount: variant.price?.amount,
-        priceCurrency: variant.price?.currencyCode,
-        fullPriceObject: JSON.stringify(variant.price)
-      });
-
       // Use the currency from the product price - Storefront API returns price in store's currency
       const currencyCode = variant.price.currencyCode || 'USD';
-      const currencySymbol = getCurrencySymbol(currencyCode);
-
-      console.log('💱 Currency detection:', {
-        currencyCode,
-        currencySymbol,
-        productTitle: product.title
-      });
-
       const price = parseFloat(variant.price.amount).toFixed(2);
       const compareAtPrice = variant.compareAtPrice ? parseFloat(variant.compareAtPrice.amount).toFixed(2) : null;
       const hasDiscount = compareAtPrice && parseFloat(compareAtPrice) > parseFloat(price);
@@ -235,20 +233,20 @@ export default extension(
         // Old price
         const oldPrice = root.createComponent(
           Text,
-          { 
+          {
             size: 'small',
             appearance: 'subdued',
             decoration: 'strikethrough'
           },
-          `${currencySymbol}${compareAtPrice}`
+          formatPrice(compareAtPrice, currencyCode)
         );
         priceInfo.appendChild(oldPrice);
-        
+
         // Discount
         const discount = Math.round(((parseFloat(compareAtPrice) - parseFloat(price)) / parseFloat(compareAtPrice)) * 100);
         const discountText = root.createComponent(
           Text,
-          { 
+          {
             size: 'small',
             emphasis: 'bold',
             appearance: 'critical'
@@ -257,15 +255,15 @@ export default extension(
         );
         priceInfo.appendChild(discountText);
       }
-      
+
       // Current price
       const currentPrice = root.createComponent(
         Text,
-        { 
+        {
           size: 'medium',
           emphasis: 'bold'
         },
-        `${currencySymbol}${price}`
+        formatPrice(price, currencyCode)
       );
       priceInfo.appendChild(currentPrice);
       
@@ -529,17 +527,6 @@ export default extension(
             );
 
             const collectionData = collectionQuery.data?.collection;
-
-            // Debug: Log raw collection data to check currency
-            if (collectionData?.products?.edges?.[0]) {
-              const firstProduct = collectionData.products.edges[0].node;
-              const firstVariant = firstProduct?.variants?.edges?.[0]?.node;
-              console.log('🔍 RAW COLLECTION DATA - First product:', {
-                title: firstProduct?.title,
-                variantPrice: firstVariant?.price,
-                currencyFromAPI: firstVariant?.price?.currencyCode
-              });
-            }
 
             if (collectionData?.products?.edges?.length > 0) {
               productsToFetch = collectionData.products.edges.map(edge => edge.node);
