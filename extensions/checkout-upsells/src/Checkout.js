@@ -16,24 +16,7 @@ export default extension(
   async (root, api) => {
 
 
-    const { query, shop, cartLines, applyCartLinesChange, localization, cost } = api;
-
-    // Get the current currency from the checkout
-    // The localization object provides the buyer's currency
-    let currentCurrency = 'USD';
-    try {
-      // Try to get currency from localization (buyer's selected currency)
-      if (localization?.currency?.current?.isoCode) {
-        currentCurrency = localization.currency.current.isoCode;
-      } else if (localization?.currency?.isoCode) {
-        currentCurrency = localization.currency.isoCode;
-      } else if (cost?.totalAmount?.current?.currencyCode) {
-        // Fallback to cart total currency
-        currentCurrency = cost.totalAmount.current.currencyCode;
-      }
-    } catch (e) {
-      // Keep default USD
-    }
+    const { query, shop, cartLines, applyCartLinesChange } = api;
     
     // State variables
     let upsellProducts = [];
@@ -156,8 +139,8 @@ export default extension(
       if (!variant) return null;
 
       const isAdding = addingToCart[variant.id] || false;
-      // Use the checkout's currency - prioritize currentCurrency which we extracted at startup
-      const currencyCode = currentCurrency || variant.price.currencyCode;
+      // Use the currency from the product price - Storefront API returns price in store's currency
+      const currencyCode = variant.price.currencyCode || 'USD';
       const currencySymbol = getCurrencySymbol(currencyCode);
       const price = parseFloat(variant.price.amount).toFixed(2);
       const compareAtPrice = variant.compareAtPrice ? parseFloat(variant.compareAtPrice.amount).toFixed(2) : null;
@@ -511,6 +494,10 @@ export default extension(
                               title
                               availableForSale
                               price {
+                                amount
+                                currencyCode
+                              }
+                              compareAtPrice {
                                 amount
                                 currencyCode
                               }
