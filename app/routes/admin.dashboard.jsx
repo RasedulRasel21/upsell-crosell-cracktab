@@ -1,5 +1,6 @@
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import prisma from "../db.server";
 
 export const loader = async ({ request }) => {
   try {
@@ -17,8 +18,6 @@ export const loader = async ({ request }) => {
         { status: 401 }
       );
     }
-
-    const { prisma } = await import("../db.server");
 
     // Get all upsell blocks
     const upsells = await prisma.upsellBlock.findMany({
