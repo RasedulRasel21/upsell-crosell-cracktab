@@ -20,9 +20,18 @@ api_version = "2025-07"
   topics = [ "app/uninstalled" ]
   uri = "/webhooks/app/uninstalled"
 
-  # GDPR webhooks (customers/data_request, customers/redact, shop/redact)
-  # are mandatory and automatically registered by Shopify.
-  # DO NOT declare them here - only the handler endpoints are needed.
+  # GDPR Mandatory Webhooks - Required for Shopify App Store compliance
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/data_request" ]
+  uri = "/webhooks/customers/data-request"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "customers/redact" ]
+  uri = "/webhooks/customers/redact"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = [ "shop/redact" ]
+  uri = "/webhooks/shop/redact"
 
 [access_scopes]
 scopes = "read_orders,read_products,unauthenticated_write_checkouts"
